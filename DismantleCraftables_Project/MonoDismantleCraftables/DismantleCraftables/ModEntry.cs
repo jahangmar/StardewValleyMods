@@ -105,7 +105,7 @@ namespace DismantleCraftables
                             }
                             else
                             {
-                                Game1.player.dropItem(resource);
+                                Game1.createItemDebris(resource, Game1.player.getStandingPosition(), Game1.player.FacingDirection, null, -1);
                             }
                         }
                     }
