@@ -29,10 +29,15 @@ namespace SeedsAreRare
     /// <summary>The mod entry point.</summary>
     public class ModEntry : Mod
     {
+
+        private SeedsAreRareConfig config;
+
         /// <summary>The mod entry point, called after the mod is first loaded.</summary>
         /// <param name="helper">Provides simplified APIs for writing mods.</param>
         public override void Entry(IModHelper helper)
         {
+            config = helper.ReadConfig<SeedsAreRareConfig>();
+
             helper.Events.Display.MenuChanged += this.MenuChanged;
         }
 
@@ -45,10 +50,19 @@ namespace SeedsAreRare
             //check if we are in a shop menu
             if (e.NewMenu is ShopMenu shopMenu)
             {
+                if (config.exclude_pierre && Game1.currentLocation is StardewValley.Locations.SeedShop)
+                    return;
+                if (config.exclude_oasis && shopMenu.portraitPerson != null && shopMenu.portraitPerson.Name.Equals("Sandy"))
+                    return;
+                if (config.exclude_traveling_merchant && Game1.currentLocation is StardewValley.Locations.Forest)
+                    return;
+                if (config.exclude_night_market && Game1.currentLocation is StardewValley.Locations.BeachNightMarket)
+                    return;
+
                 List<Item> shopInventory = this.Helper.Reflection.GetField<List<Item>>(shopMenu, "forSale").GetValue();
 
                 //remove all seeds but do not remove the tree saplings (those are also categorized as seeds)
-                shopInventory.RemoveAll((Item item) => item.category.Get() == StardewValley.Object.SeedsCategory && !item.Name.EndsWith("Sapling", StringComparison.Ordinal));
+                shopInventory.RemoveAll((Item item) => item.Category == StardewValley.Object.SeedsCategory && !(config.exclude_rare_seed && item.Name.Equals("Rare Seed")) && !item.Name.EndsWith("Sapling", StringComparison.Ordinal));
                     
             }           
         }

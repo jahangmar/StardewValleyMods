@@ -49,17 +49,13 @@ namespace DismantleCraftables
 
         void Input_ButtonPressed(object sender, StardewModdingAPI.Events.ButtonPressedEventArgs e)
         {
-            if (Context.IsWorldReady && e.Button.Equals(config.dismantle_key) && Game1.player.CurrentItem != null)
+            if (Context.IsWorldReady && e.Button.Equals(config.dismantle_key) && Game1.player.CurrentItem != null && Game1.activeClickableMenu == null)
             {
                 Item item = Game1.player.CurrentItem;
                 Monitor.Log($"Current Item is {item.Name} with stack size {item.Stack}" + ((item is StardewValley.Object) ? " and it is an object" : "" ), LogLevel.Trace);
 
                 if (craftingRecipes.TryGetValue(item.Name, out string raw))
                 {
-                    if (Game1.activeClickableMenu != null)
-                    {
-                        Game1.activeClickableMenu.emergencyShutDown();
-                    }
                     Game1.activeClickableMenu = new DismantleDialogueBox(Helper, Monitor, item, TryDismantling);
                 }
                 else
