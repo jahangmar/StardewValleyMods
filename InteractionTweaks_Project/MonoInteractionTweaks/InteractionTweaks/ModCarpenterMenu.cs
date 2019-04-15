@@ -18,6 +18,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley;
+using StardewValley.Buildings;
 using StardewValley.Menus;
 using StardewValley.Objects;
 
@@ -39,7 +40,7 @@ namespace InteractionTweaks
         private readonly Item woodObject = ObjectFactory.getItemFromDescription(ObjectFactory.regularObject, Object.wood, 1);
         private readonly Item stoneObject = ObjectFactory.getItemFromDescription(ObjectFactory.regularObject, Object.stone, 1);
 
-        private List<BluePrint> vanillaBlueprints, modBlueprints;
+        private List<BluePrint> vanillaBlueprints, modBlueprints, saleBlueprints;
 
         private int remainingWoodReq;
         private int remainingStoneReq;
@@ -69,14 +70,19 @@ namespace InteractionTweaks
 
             vanillaBlueprints = new List<BluePrint>(Helper.Reflection.GetField<List<BluePrint>>(this, "blueprints").GetValue());
             modBlueprints = new List<BluePrint>(vanillaBlueprints);
+            saleBlueprints = new List<BluePrint>(vanillaBlueprints);
             for (int i = 0; i < modBlueprints.Count; i++)
             {
                 modBlueprints[i] = new BluePrint(vanillaBlueprints[i].name);
+                saleBlueprints[i] = new BluePrint(vanillaBlueprints[i].name);
                 modBlueprints[i].itemsRequired.Remove(woodObject.ParentSheetIndex);
+
                 //modBlueprints[i].itemsRequired.Add(woodObject.ParentSheetIndex, 0);
                 modBlueprints[i].itemsRequired.Remove(stoneObject.ParentSheetIndex);
+
                 //modBlueprints[i].itemsRequired.Add(stoneObject.ParentSheetIndex, 0);
                 modBlueprints[i].moneyRequired = GetPrice(vanillaBlueprints[i]);
+                saleBlueprints[i].moneyRequired = GetPrice(vanillaBlueprints[i]);
             }
         }
 
@@ -84,7 +90,14 @@ namespace InteractionTweaks
         {
             base.draw(b);
 
+            bool onFarm = Helper.Reflection.GetField<bool>(this, "onFarm").GetValue();
+            if (onFarm)
+            {
+                return;
+            }
+
             moneyButton.draw(b);
+
 
             if (moneyButtonEnabled)
             {
@@ -120,6 +133,8 @@ namespace InteractionTweaks
                     ingredient.Stack = remainingStoneReq;
                     ingredient.drawInMenu(b, vector, 1f);
                     Utility.drawTextWithShadow(b, ingredient.DisplayName + " " + ingredInfo, Game1.dialogueFont, new Vector2(vector.X + 64f + 16f, vector.Y + 20f), magicalConstruction ? Color.PaleGoldenrod : Game1.textColor, 1f, -1f, -1, -1, magicalConstruction ? 0f : 0.25f, 3);
+                    if (ingredient.Stack == 0)
+                        Utility.drawTinyDigits(0, b, vector + new Vector2((float)(64 - Utility.getWidthOfTinyDigitString(0, 3f * 1f)) + 3f * 1f, 64f - 18f * 1f + 2f), 3f * 1f, 1f, Color.White);
                 }
 
             }
@@ -137,6 +152,10 @@ namespace InteractionTweaks
         {
             base.performHoverAction(x, y);
 
+            bool onFarm = Helper.Reflection.GetField<bool>(this, "onFarm").GetValue();
+            if (onFarm)
+                return;
+
             moneyButton.tryHover(x, y);
             if (moneyButton.containsPoint(x, y))
             {
@@ -146,26 +165,54 @@ namespace InteractionTweaks
 
         public override void receiveLeftClick(int x, int y, bool playSound = true)
         {
-            base.receiveLeftClick(x, y, playSound);
-            if (moneyButton.containsPoint(x, y))
+            bool onFarm = Helper.Reflection.GetField<bool>(this, "onFarm").GetValue();
+
+            if (!onFarm && moneyButton.containsPoint(x, y))
                 moneyButtonEnabled = !moneyButtonEnabled;
 
-            bool onFarm = Helper.Reflection.GetField<bool>(this, "onFarm").GetValue();
-            if (!onFarm)
+            int currentBlueprintIndex = Helper.Reflection.GetField<int>(this, "currentBlueprintIndex").GetValue();
+
+            if (onFarm && moneyButtonEnabled)
             {
-                if (moneyButtonEnabled)
+                bool demolishing = Helper.Reflection.GetField<bool>(this, "demolishing").GetValue();
+                bool moving = Helper.Reflection.GetField<bool>(this, "moving").GetValue();
+                if (demolishing || moving)
                 {
-                    Helper.Reflection.GetField<List<BluePrint>>(this, "blueprints").SetValue(modBlueprints);
-                    setNewActiveBlueprint();
-                    int currentBlueprintIndex = Helper.Reflection.GetField<int>(this, "currentBlueprintIndex").GetValue();
-                    remainingWoodReq = GetRequired(vanillaBlueprints[currentBlueprintIndex], woodObject) - InventoryAmount(woodObject.Name);
-                    remainingStoneReq = GetRequired(vanillaBlueprints[currentBlueprintIndex], stoneObject) - InventoryAmount(stoneObject.Name);                  
+                    moneyButtonEnabled = false;
                 }
                 else
                 {
-                    Helper.Reflection.GetField<List<BluePrint>>(this, "blueprints").SetValue(vanillaBlueprints);
+                    //set blueprints
+                    Monitor.Log("setting saleBlueprint", LogLevel.Trace);
+                    Helper.Reflection.GetField<List<BluePrint>>(this, "blueprints").SetValue(saleBlueprints);
                     setNewActiveBlueprint();
+                    //Monitor.Log("Money required: " + CurrentBlueprint.moneyRequired, LogLevel.Trace);
+                    //Monitor.Log("Wood required: " + GetRequired(CurrentBlueprint, woodObject), LogLevel.Trace);
+                    //moneyButtonEnabled = false;
                 }
+            }
+
+
+            //Monitor.Log("I.  Money required: " + CurrentBlueprint.moneyRequired, LogLevel.Trace);
+            //Monitor.Log("I.  Wood required: " + GetRequired(CurrentBlueprint, woodObject), LogLevel.Trace);
+            Monitor.Log("base.receiveLeftClick", LogLevel.Trace);
+            base.receiveLeftClick(x, y, playSound);
+            //Monitor.Log("II. Money required: " + CurrentBlueprint.moneyRequired, LogLevel.Trace);
+            //Monitor.Log("II. Wood required: " + GetRequired(CurrentBlueprint, woodObject), LogLevel.Trace);
+
+            if (!onFarm && moneyButtonEnabled)
+            {
+                Monitor.Log("setting modBlueprint", LogLevel.Trace);
+                Helper.Reflection.GetField<List<BluePrint>>(this, "blueprints").SetValue(modBlueprints);
+                setNewActiveBlueprint();
+                remainingWoodReq = GetRequired(vanillaBlueprints[currentBlueprintIndex], woodObject) - InventoryAmount(woodObject.Name);
+                remainingStoneReq = GetRequired(vanillaBlueprints[currentBlueprintIndex], stoneObject) - InventoryAmount(stoneObject.Name);
+            }
+            if (!moneyButtonEnabled)
+            {
+                Monitor.Log("setting vanillaBlueprint", LogLevel.Trace);
+                Helper.Reflection.GetField<List<BluePrint>>(this, "blueprints").SetValue(vanillaBlueprints);
+                setNewActiveBlueprint();
             }
         }
 

@@ -40,6 +40,7 @@
     <Compile Include="InteractionTweaksConfig.cs" />
     <Compile Include="ModCarpenterMenu.cs" />
     <Compile Include="CarpenterMenuFeature.cs" />
+    <Compile Include="FishingRodFeature.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -52,4 +53,13 @@
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Pathoschild.Stardew.ModBuildConfig.2.2.0\build\Pathoschild.Stardew.ModBuildConfig.targets" Condition="Exists('..\packages\Pathoschild.Stardew.ModBuildConfig.2.2.0\build\Pathoschild.Stardew.ModBuildConfig.targets')" />
+  <ProjectExtensions>
+    <MonoDevelop>
+      <Properties>
+        <Policies>
+          <StandardHeader IncludeInNewFiles="True" Text="//Copyright (c) 2019 Jahangmar&#xA;&#xA;//This program is free software: you can redistribute it and/or modify&#xA;//it under the terms of the GNU Lesser General Public License as published by&#xA;//the Free Software Foundation, either version 3 of the License, or&#xA;//(at your option) any later version.&#xA;&#xA;//This program is distributed in the hope that it will be useful,&#xA;//but WITHOUT ANY WARRANTY; without even the implied warranty of&#xA;//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the&#xA;//GNU Lesser General Public License for more details.&#xA;&#xA;//You should have received a copy of the GNU Lesser General Public License&#xA;//along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;." />
+        </Policies>
+      </Properties>
+    </MonoDevelop>
+  </ProjectExtensions>
 </Project>

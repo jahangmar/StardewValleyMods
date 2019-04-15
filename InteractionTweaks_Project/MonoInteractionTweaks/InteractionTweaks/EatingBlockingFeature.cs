@@ -23,6 +23,7 @@ using StardewValley.Objects;
 
 using Microsoft.Xna.Framework;
 using StardewValley.Tools;
+using StardewValley.TerrainFeatures;
 
 namespace InteractionTweaks
 {
@@ -54,13 +55,21 @@ namespace InteractionTweaks
 
                 //player.isEating = true;
 
-                if (Game1.activeClickableMenu != null
+                //this + Grabtile
+                //(!Utility.tileWithinRadiusOfPlayer ((int)vector.X, (int)vector.Y, 1, player)) 
+                //      if (vector.Equals (player.getTileLocation ()) && isAnyGamePadButtonBeingPressed ()) {
+             //   vector = Utility.getTranslatedVector2(vector, player.FacingDirection, 1f);
+           // }
+
+            if (Game1.activeClickableMenu != null
                     || objAtGrabTile?.heldObject?.Value != null && objAtGrabTile.heldObject.Value.readyForHarvest //interactable containers (e.g. preserver jars) has finished product
                     || location.isActionableTile((int)grabTileVec.X, (int)grabTileVec.Y, player) //isActionableTile checks stuff like doors, chests, ...
-                    || objAtGrabTile != null && (objAtGrabTile.isForage(location) || objAtGrabTile.isAnimalProduct()) //forage and animal products
+                    //|| objAtGrabTile != null && (objAtGrabTile.isForage(location) || objAtGrabTile.isAnimalProduct()) //forage and animal products
+                    || location.objects.ContainsKey(grabTileVec) && ((bool)location.objects[grabTileVec].isSpawnedObject) //forage and animal products
+                    || location.terrainFeatures.ContainsKey(grabTileVec) && location.terrainFeatures[grabTileVec] is HoeDirt hoeDirt && hoeDirt.crop != null && hoeDirt.crop.currentPhase.Value == hoeDirt.crop.phaseDays.Count-1 && hoeDirt.crop.dayOfCurrentPhase == 0//crops ready for harvest
                     || (location is Farm && grabTileVec.X >= 71 && grabTileVec.X <= 72 && grabTileVec.Y >= 13 && grabTileVec.Y <= 14) //shippingBin on Farm map
                     || Game1.getFarm().getAllFarmAnimals().Exists((animal) => animal.currentLocation == location && AnimalCollision(animal, cursorMapPos)) //animals
-                    || location.doesPositionCollideWithCharacter((int)cursorMapPos.X, (int)cursorMapPos.Y) != null || location.doesPositionCollideWithCharacter((int)cursorMapPos.X, (int)cursorMapPos.Y + Game1.tileSize) != null //character, important for gifting and speaking
+                    || CheckForCharacterCollision(Game1.currentLocation, cursorMapPos)
 
                 /*|| player.isRidingHorse()*/ || !player.canMove)
                 {
@@ -69,7 +78,7 @@ namespace InteractionTweaks
 
                 if (player.ActiveObject != null && objAtGrabTile != null && objAtGrabTile.performObjectDropInAction(player.ActiveObject, true, player)) //container (e.g. preserver jar) accepts input
                 {
-                    Monitor.Log($"true == player.ActiveObject != null && obj != null && obj.performObjectDropInAction(player.ActiveObject, true, player)");
+                    //Monitor.Log($"true == player.ActiveObject != null && obj != null && obj.performObjectDropInAction(player.ActiveObject, true, player)", LogLevel.Trace);
                     objAtGrabTile.heldObject.Value = null; //performObjectDropInAction sets heldObject so we reset it
                     return;
                 }
@@ -126,6 +135,25 @@ namespace InteractionTweaks
                     Helper.Input.Suppress(e.Button);
                 }
             }
+        }
+
+        private static bool CheckForCharacterCollision(GameLocation location, Vector2 cursorPos)
+        {
+            if (Utility.withinRadiusOfPlayer((int)cursorPos.X, (int)cursorPos.Y, 1, Game1.player)) {
+                foreach (Character character in location.getCharacters())
+                {
+
+                    //Monitor.Log($"{character.Name}: Height: {character.Sprite.getHeight()}, Width: {character.Sprite.getWidth()}");
+                    //Monitor.Log($"{character.Name}: {character.Position.X+8} <= {cursorPos.X} && {cursorPos.X} <= {character.Position.X + character.Sprite.getWidth() * 3 + 8}");
+                    //Monitor.Log($"\t&& {character.Position.Y - Game1.tileSize} <= {cursorPos.Y} && {cursorPos.Y} <= {character.Position.Y + Game1.tileSize}");
+                    if (character.Position.X+8 <= cursorPos.X && cursorPos.X <= character.Position.X + character.Sprite.getWidth() * 3 + 8
+                    && character.Position.Y - Game1.tileSize <= cursorPos.Y && cursorPos.Y <= character.Position.Y + Game1.tileSize)
+                        //if (character.GetBoundingBox().Intersects(new Rectangle((int)cursorPos.X - Game1.tileSize / 2, (int)cursorPos.Y - Game1.tileSize / 2, Game1.tileSize, Game1.tileSize))
+                        //|| character.GetBoundingBox().Intersects(new Rectangle((int)cursorPos.X - Game1.tileSize / 2, (int)cursorPos.Y - Game1.tileSize - Game1.tileSize / 2, Game1.tileSize, Game1.tileSize)))
+                        return true;
+                }
+            }
+            return false;
         }
 
         private static bool NotInFightingLocation()

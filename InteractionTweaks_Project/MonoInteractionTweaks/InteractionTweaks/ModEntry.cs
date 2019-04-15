@@ -36,8 +36,22 @@ namespace InteractionTweaks
                 AdventurersGuildFeature.Enable();
             if (config.CarpenterMenuFeature)
                 CarpenterMenuFeature.Enable();
+            if (config.FishingRodFeature)
+                FishingRodFeature.Enable();
             //if (config.ToolsFeature)
             //     DontUseToolsFeature.Enable();
+
+            Monitor.Log("Configuration:", LogLevel.Trace);
+            Monitor.Log($"config.EatingFeature: {config.EatingFeature}", LogLevel.Trace);
+            Monitor.Log($"config.AdventurersGuildShopFeature: {config.AdventurersGuildShopFeature}", LogLevel.Trace);
+            Monitor.Log($"config.CarpenterMenuFeature: {config.CarpenterMenuFeature}", LogLevel.Trace);
+            Monitor.Log($"config.SlingshotFeature: {config.SlingshotFeature}", LogLevel.Trace);
+            Monitor.Log($"config.FishingRodFeature: {config.FishingRodFeature}", LogLevel.Trace);
+
+            Helper.ConsoleCommands.Add("carp", "", (string arg1, string[] arg2) =>
+            {
+                StardewValley.Game1.activeClickableMenu = new StardewValley.Menus.CarpenterMenu();
+            });
 
         }
 

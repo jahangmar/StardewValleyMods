@@ -9,5 +9,6 @@ namespace InteractionTweaks
         public bool AdventurersGuildShopFeature { get; set; } = true;
         //public bool WeaponBlockingFeature { get; set; } = true;
         public bool CarpenterMenuFeature { get; set; } = true;
+        public bool FishingRodFeature { get; set; } = true;
     }
 }
