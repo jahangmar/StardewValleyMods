@@ -51,28 +51,23 @@ namespace InteractionTweaks
                 Vector2 grabTileVec = e.Cursor.GrabTile;
                 Vector2 cursorScreenPos = e.Cursor.ScreenPixels;
                 Vector2 cursorMapPos = e.Cursor.AbsolutePixels;
+                Vector2 cursorMapTile = new Vector2((int)(cursorMapPos.X / Game1.tileSize), (int) (cursorMapPos.Y / Game1.tileSize));
                 Object objAtGrabTile = location.getObjectAtTile((int)grabTileVec.X, (int)grabTileVec.Y);
 
-                //player.isEating = true;
-
-                //this + Grabtile
-                //(!Utility.tileWithinRadiusOfPlayer ((int)vector.X, (int)vector.Y, 1, player)) 
-                //      if (vector.Equals (player.getTileLocation ()) && isAnyGamePadButtonBeingPressed ()) {
-             //   vector = Utility.getTranslatedVector2(vector, player.FacingDirection, 1f);
-           // }
-
+                //TODO use Utility.canGrabSomethingFromHere instead?
             if (Game1.activeClickableMenu != null
                     || objAtGrabTile?.heldObject?.Value != null && objAtGrabTile.heldObject.Value.readyForHarvest //interactable containers (e.g. preserver jars) has finished product
                     || location.isActionableTile((int)grabTileVec.X, (int)grabTileVec.Y, player) //isActionableTile checks stuff like doors, chests, ...
-                    //|| objAtGrabTile != null && (objAtGrabTile.isForage(location) || objAtGrabTile.isAnimalProduct()) //forage and animal products
+                    || location.isActionableTile((int)grabTileVec.X, (int)grabTileVec.Y + 1, player)
                     || location.objects.ContainsKey(grabTileVec) && ((bool)location.objects[grabTileVec].isSpawnedObject) //forage and animal products
                     || location.terrainFeatures.ContainsKey(grabTileVec) && location.terrainFeatures[grabTileVec] is HoeDirt hoeDirt && hoeDirt.crop != null && hoeDirt.crop.currentPhase.Value == hoeDirt.crop.phaseDays.Count-1 && hoeDirt.crop.dayOfCurrentPhase == 0//crops ready for harvest
                     || (location is Farm && grabTileVec.X >= 71 && grabTileVec.X <= 72 && grabTileVec.Y >= 13 && grabTileVec.Y <= 14) //shippingBin on Farm map
                     || Game1.getFarm().getAllFarmAnimals().Exists((animal) => animal.currentLocation == location && AnimalCollision(animal, cursorMapPos)) //animals
-                    || CheckForCharacterCollision(Game1.currentLocation, cursorMapPos)
+                    || CanGift(cursorMapTile, grabTileVec) //talking and gifting
 
                 /*|| player.isRidingHorse()*/ || !player.canMove)
                 {
+                    //Monitor.Log("action was found, do not eat");
                     return;
                 }
 
@@ -90,7 +85,7 @@ namespace InteractionTweaks
                 else if (Config.EatingFeature && player.CurrentItem is Object food && food.Edibility > -300 &&
                     !isEating && player.ActiveObject != null && !Game1.dialogueUp && !Game1.eventUp && !player.canOnlyWalk && !player.FarmerSprite.PauseForSingleAnimation && !Game1.fadeToBlack)
                 {
-                    Monitor.Log("Eating " + food.Name + "; Edibility is " + food.Edibility, LogLevel.Trace);
+                    //Monitor.Log("Eating " + food.Name + "; Edibility is " + food.Edibility, LogLevel.Trace);
 
                     player.faceDirection(2);
                     isEating = true;
@@ -99,7 +94,7 @@ namespace InteractionTweaks
 
                     int untilFull = UntilFull(player, food);
 
-                    Monitor.Log($"Until full is {untilFull}, staminaInc: {StaminaInc(food)}*{untilFull}, new: {player.Stamina + StaminaInc(food) * untilFull}/{player.MaxStamina}, healthInc: {HealthInc(food)}*{untilFull}, new: {player.health + HealthInc(food) * untilFull}/{player.maxHealth}", LogLevel.Trace);
+                    //Monitor.Log($"Until full is {untilFull}, staminaInc: {StaminaInc(food)}*{untilFull}, new: {player.Stamina + StaminaInc(food) * untilFull}/{player.MaxStamina}, healthInc: {HealthInc(food)}*{untilFull}, new: {player.health + HealthInc(food) * untilFull}/{player.maxHealth}", LogLevel.Trace);
 
                     Response[] responses = {
                             new Response ("One", GetTrans("dia.eatanswerone")),
@@ -119,11 +114,11 @@ namespace InteractionTweaks
                                 player.eatHeldObject();
                                 break;
                             case "Multi":
-                                Monitor.Log("Eating stack", LogLevel.Trace);
+                                //Monitor.Log("Eating stack", LogLevel.Trace);
                                 float oldStamina = player.Stamina;
                                 int oldHealth = player.health;
                                 EatFood(player, food, untilFull - 1);
-                                Monitor.Log("Eating last object", LogLevel.Trace);
+                                //Monitor.Log("Eating last object", LogLevel.Trace);
                                 float midStamina = player.Stamina;
                                 int midHealth = player.health;
                                 player.eatHeldObject();
@@ -137,21 +132,16 @@ namespace InteractionTweaks
             }
         }
 
-        private static bool CheckForCharacterCollision(GameLocation location, Vector2 cursorPos)
+        private static bool CanGift(Vector2 cursorMapTile, Vector2 grabTile)
         {
-            if (Utility.withinRadiusOfPlayer((int)cursorPos.X, (int)cursorPos.Y, 1, Game1.player)) {
-                foreach (Character character in location.getCharacters())
-                {
-
-                    //Monitor.Log($"{character.Name}: Height: {character.Sprite.getHeight()}, Width: {character.Sprite.getWidth()}");
-                    //Monitor.Log($"{character.Name}: {character.Position.X+8} <= {cursorPos.X} && {cursorPos.X} <= {character.Position.X + character.Sprite.getWidth() * 3 + 8}");
-                    //Monitor.Log($"\t&& {character.Position.Y - Game1.tileSize} <= {cursorPos.Y} && {cursorPos.Y} <= {character.Position.Y + Game1.tileSize}");
-                    if (character.Position.X+8 <= cursorPos.X && cursorPos.X <= character.Position.X + character.Sprite.getWidth() * 3 + 8
-                    && character.Position.Y - Game1.tileSize <= cursorPos.Y && cursorPos.Y <= character.Position.Y + Game1.tileSize)
-                        //if (character.GetBoundingBox().Intersects(new Rectangle((int)cursorPos.X - Game1.tileSize / 2, (int)cursorPos.Y - Game1.tileSize / 2, Game1.tileSize, Game1.tileSize))
-                        //|| character.GetBoundingBox().Intersects(new Rectangle((int)cursorPos.X - Game1.tileSize / 2, (int)cursorPos.Y - Game1.tileSize - Game1.tileSize / 2, Game1.tileSize, Game1.tileSize)))
-                        return true;
-                }
+            if (Utility.checkForCharacterInteractionAtTile(cursorMapTile, Game1.player) || Utility.checkForCharacterInteractionAtTile(new Vector2(cursorMapTile.X, cursorMapTile.Y + 1), Game1.player)) //mouse is over character
+            {
+                if ((Game1.mouseCursor == 3 || Game1.mouseCursor == 4) && System.Math.Abs(Game1.mouseCursorTransparency - 1f) < 0.01) //3 is gift cursor and 4 is speech bubble cursor, transparency == 1 means that player is close enough to character
+                    return true;
+            }
+            else if (Utility.checkForCharacterInteractionAtTile(grabTile, Game1.player)) //mouse if far away
+            {
+                return true;
             }
             return false;
         }
@@ -218,11 +208,11 @@ namespace InteractionTweaks
 
         private static void EatFood(Farmer player, Object food, int redAmount)
         {
-            Monitor.Log($"Setting Stamina to System.Math.Min({(float)player.MaxStamina}, {player.Stamina + (float)StaminaInc(food) * redAmount})", LogLevel.Trace);
+            //Monitor.Log($"Setting Stamina to System.Math.Min({(float)player.MaxStamina}, {player.Stamina + (float)StaminaInc(food) * redAmount})", LogLevel.Trace);
 
             player.Stamina = System.Math.Min((float)player.MaxStamina, player.Stamina + (float)StaminaInc(food) * redAmount);
 
-            Monitor.Log($"Setting health to System.Math.Min({player.maxHealth}, {player.health + HealthInc(food) * redAmount})", LogLevel.Trace);
+            //Monitor.Log($"Setting health to System.Math.Min({player.maxHealth}, {player.health + HealthInc(food) * redAmount})", LogLevel.Trace);
 
             player.health = System.Math.Min(player.maxHealth, player.health + HealthInc(food) * redAmount);
             player.removeItemsFromInventory(food.ParentSheetIndex, redAmount);

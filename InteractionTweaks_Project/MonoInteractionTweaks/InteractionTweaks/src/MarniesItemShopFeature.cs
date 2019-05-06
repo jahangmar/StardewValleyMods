@@ -78,10 +78,14 @@ namespace InteractionTweaks
         private static void Input_ButtonReleased(object sender, ButtonReleasedEventArgs e)
         {
             ShopMenu shopMenu = (ShopMenu)Game1.activeClickableMenu;
-            ConvertItems(shopMenu);
+            Item heldItem = Helper.Reflection.GetField<Item>(shopMenu, "heldItem").GetValue();
+            int x = (int)e.Cursor.ScreenPixels.X;
+            int y = (int)e.Cursor.ScreenPixels.Y;
+            if (shopMenu.inventory.getItemAt(x,y) != null || heldItem != null)
+                ConvertItems(shopMenu);
         }
 
-        private static void AddItems(ShopMenu shopMenu)
+        protected static void AddItems(ShopMenu shopMenu)
         {
             InventoryMenu inventoryMenu = Helper.Reflection.GetField<InventoryMenu>(shopMenu, "inventory").GetValue();
             InventoryMenu.highlightThisItem hightlightMethod = inventoryMenu.highlightMethod;
@@ -106,28 +110,31 @@ namespace InteractionTweaks
             return (item.Name.Equals(ModHayObject.internalName) || item.Name.Equals(ModHayBaleObject.internalName) || item.Name.Equals(ModHeaterObject.internalName) || item is MilkPail || item is Shears || item.Name.Equals(ModAutoGrabberObject.internalName));
         }
 
-        private static void ConvertItems(ShopMenu shopMenu)
+        protected static void ConvertItems(ShopMenu shopMenu)
         {
+            Monitor.Log("Converting items in inventory", LogLevel.Trace);
             InventoryMenu inventoryMenu = Helper.Reflection.GetField<InventoryMenu>(shopMenu, "inventory").GetValue();
             for (int i = 0; i < inventoryMenu.actualInventory.Count; i++)
             {
-                if (inventoryMenu.actualInventory[i] is MilkPail milkPail)
+                if (inventoryMenu.actualInventory[i] is MilkPail milkPail && !(milkPail is ModMilkPail))
                     inventoryMenu.actualInventory[i] = new ModMilkPail(milkPail);
-                if (inventoryMenu.actualInventory[i] is Shears shears)
+                if (inventoryMenu.actualInventory[i] is Shears shears && !(shears is ModShears))
                     inventoryMenu.actualInventory[i] = new ModShears(shears);
-                if (inventoryMenu.actualInventory[i] is Object obj && obj.name.Equals(ModHayObject.internalName))
+                if (inventoryMenu.actualInventory[i] is Object obj && obj.name.Equals(ModHayObject.internalName) && !(obj is ModHayObject))
                     inventoryMenu.actualInventory[i] = new ModHayObject(obj);
-                if (inventoryMenu.actualInventory[i] is Object obj2 && obj2.name.Equals(ModHayBaleObject.internalName))
+                if (inventoryMenu.actualInventory[i] is Object obj2 && obj2.name.Equals(ModHayBaleObject.internalName) && !(obj2 is ModHayBaleObject))
                     inventoryMenu.actualInventory[i] = new ModHayBaleObject(obj2);
-                if (inventoryMenu.actualInventory[i] is Object obj3 && obj3.name.Equals(ModHeaterObject.internalName))
+                if (inventoryMenu.actualInventory[i] is Object obj3 && obj3.name.Equals(ModHeaterObject.internalName) && !(obj3 is ModHeaterObject))
                     inventoryMenu.actualInventory[i] = new ModHeaterObject(obj3);
-                if (inventoryMenu.actualInventory[i] is Object obj4 && obj4.name.Equals(ModAutoGrabberObject.internalName))
+                if (inventoryMenu.actualInventory[i] is Object obj4 && obj4.name.Equals(ModAutoGrabberObject.internalName) && !(obj4 is ModAutoGrabberObject))
                     inventoryMenu.actualInventory[i] = new ModAutoGrabberObject(obj4);
+                //Monitor.Log($"inventory[{i}] is now {inventoryMenu.actualInventory[i]?.GetType().ToString()}", LogLevel.Trace);
             }
         }
 
-        private static void ResetItems(ShopMenu shopMenu)
+        public static void ResetItems(ShopMenu shopMenu)
         {
+            Monitor.Log("Resetting items in inventory", LogLevel.Trace);
             InventoryMenu inventoryMenu = Helper.Reflection.GetField<InventoryMenu>(shopMenu, "inventory").GetValue();
             for (int i = 0; i < inventoryMenu.actualInventory.Count; i++)
             {
@@ -143,7 +150,9 @@ namespace InteractionTweaks
                     inventoryMenu.actualInventory[i] = obj3.ToObject();
                 if (inventoryMenu.actualInventory[i] is ModAutoGrabberObject obj4)
                     inventoryMenu.actualInventory[i] = obj4.ToObject();
+                //Monitor.Log($"inventory[{i}] is now {inventoryMenu.actualInventory[i]?.GetType().ToString()}", LogLevel.Trace);
             }
+
         }
 
         private static int GetPrice(Item item)
@@ -168,6 +177,8 @@ namespace InteractionTweaks
 
             public ModMilkPail(MilkPail milkPail) : base()
             {
+                if (milkPail is ModMilkPail)
+                    Monitor.Log("Bug: tried to create ModMilkPail from ModMilkPail", LogLevel.Error);
                 this.milkPail = milkPail;
             }
 
@@ -181,6 +192,8 @@ namespace InteractionTweaks
 
             public ModShears(Shears shears) : base()
             {
+                if (shears is ModShears)
+                    Monitor.Log("Bug: tried to create ModShears from ModShears", LogLevel.Error);
                 this.shears = shears;
             }
 
@@ -196,10 +209,16 @@ namespace InteractionTweaks
 
             public ModHayObject(Object obj) : base(178, obj.Stack, false, -1, 0)
             {
+                if (obj is ModHayObject)
+                    Monitor.Log("Bug: tried to create ModHayObject from ModHayObject", LogLevel.Error);
                 this.obj = obj;
             }
 
-            public Object ToObject() => obj;
+            public Object ToObject()
+            {
+                obj.Stack = this.Stack;
+                return obj;
+            }
 
             public override int salePrice() => GetPrice(obj);
             public override int sellToStorePrice() => GetPrice(obj);
@@ -213,6 +232,8 @@ namespace InteractionTweaks
 
             public ModHeaterObject(Object obj) : base(Vector2.Zero, 104, false)
             {
+                if (obj is ModHeaterObject)
+                    Monitor.Log("Bug: tried to create ModHeaterObject from ModHeaterObject", LogLevel.Error);
                 this.obj = obj;
             }
 
@@ -230,6 +251,8 @@ namespace InteractionTweaks
 
             public ModAutoGrabberObject(Object obj) : base(Vector2.Zero, 165, false)
             {
+                if (obj is ModAutoGrabberObject)
+                    Monitor.Log("Bug: tried to create ModAutoGrabberObject from ModAutoGrabberObject", LogLevel.Error);
                 this.obj = obj;
             }
 
@@ -247,6 +270,8 @@ namespace InteractionTweaks
 
             public ModHayBaleObject(Object obj) : base(Vector2.Zero, 45, false)
             {
+                if (obj is ModHayBaleObject)
+                    Monitor.Log("Bug: tried to create ModHayBaleObject from ModHayBaleObject", LogLevel.Error);
                 this.obj = obj;
             }
 

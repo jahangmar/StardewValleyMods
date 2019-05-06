@@ -51,6 +51,17 @@ namespace InteractionTweaks
             Monitor.Log($"config.SellableItemsFeature: {config.SellableItemsFeature}", LogLevel.Trace);
             //Monitor.Log($"config.SlingshotFeature: {config.SlingshotFeature}", LogLevel.Trace);
             //Monitor.Log($"config.FishingRodFeature: {config.FishingRodFeature}", LogLevel.Trace);
+
+            /*
+            Helper.ConsoleCommands.Add("player_inventory", "",(string arg1, string[] arg2) => {
+                Monitor.Log("Player inventory:", LogLevel.Info);
+                foreach (StardewValley.Item item in StardewValley.Game1.player.Items)
+                    Monitor.Log("Item is type " + item?.GetType().ToString(), LogLevel.Info);
+            });
+            Helper.ConsoleCommands.Add("reset_marnie", "", (string arg1, string[] arg2) => {
+                MarniesItemShopFeature.ResetItems(new StardewValley.Menus.ShopMenu(StardewValley.Utility.getAnimalShopStock()));
+            });
+            */
         }
 
         public InteractionTweaksConfig GetConfig() {

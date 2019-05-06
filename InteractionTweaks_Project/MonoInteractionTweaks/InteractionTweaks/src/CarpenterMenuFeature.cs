@@ -100,6 +100,8 @@ namespace InteractionTweaks
 
         private static void Input_ButtonPressed(object sender, ButtonPressedEventArgs e)
         {
+            if (!(Game1.activeClickableMenu is CarpenterMenu))
+                return;
             CarpenterMenu carpenterMenu = (CarpenterMenu)Game1.activeClickableMenu;
             if (!setupBlueprints)
                 SetupBlueprints(carpenterMenu);
@@ -157,6 +159,8 @@ namespace InteractionTweaks
 
         private static void Display_RenderingActiveMenu(object sender, RenderingActiveMenuEventArgs e)
         {
+            if (!(Game1.activeClickableMenu is CarpenterMenu))
+                return;
             CarpenterMenu carpenterMenu = (CarpenterMenu)Game1.activeClickableMenu;
             bool onFarm = Helper.Reflection.GetField<bool>(carpenterMenu, "onFarm").GetValue();
             if (onFarm)
@@ -174,6 +178,8 @@ namespace InteractionTweaks
 
         static void Display_RenderedActiveMenu(object sender, RenderedActiveMenuEventArgs e)
         {
+            if (!(Game1.activeClickableMenu is CarpenterMenu))
+                return;
             CarpenterMenu carpenterMenu = (CarpenterMenu)Game1.activeClickableMenu;
             bool onFarm = Helper.Reflection.GetField<bool>(carpenterMenu, "onFarm").GetValue();
             if (onFarm)
