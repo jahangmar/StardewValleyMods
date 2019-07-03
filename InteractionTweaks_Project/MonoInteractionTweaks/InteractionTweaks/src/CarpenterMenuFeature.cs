@@ -61,25 +61,8 @@ namespace InteractionTweaks
         {
             if (e.NewMenu is CarpenterMenu carpenterMenu)
             {
-                if (Helper.ModRegistry.IsLoaded("Pathoschild.TractorMod"))
-                {
-                    Monitor.Log("TractorMod was detected.", LogLevel.Debug);
-                    int stableCount = Helper.Reflection.GetField<List<BluePrint>>(carpenterMenu, "blueprints").GetValue().FindAll((BluePrint blueprint) => blueprint.name.Equals("Stable")).Count;
-                    if (stableCount == 1)//garage not added
-                    {
-                        Monitor.Log("CarpenterMenu: TractorMod hasn't changed blueprints yet.", LogLevel.Trace);
-                        setupBlueprints = false;
-                    }
-                    else
-                    {
-                        Monitor.Log("CarpenterMenu: TractorMod changed blueprints already.", LogLevel.Trace);
-                        SetupBlueprints(carpenterMenu);
-                    }
-                }
-                else
-                {
-                    SetupBlueprints(carpenterMenu);
-                }
+                //blueprints are setup on first button press to avoid problems with mods adding new blueprints
+                setupBlueprints = false;
 
                 SetupButtons(carpenterMenu);
 
@@ -92,9 +75,6 @@ namespace InteractionTweaks
                 Helper.Events.Display.RenderingActiveMenu -= Display_RenderingActiveMenu;
                 Helper.Events.Display.RenderedActiveMenu -= Display_RenderedActiveMenu;
                 Helper.Events.Input.ButtonPressed -= Input_ButtonPressed;
-                Monitor.Log("CarpenterMenu: setting vanillaBlueprint", LogLevel.Trace);
-                Helper.Reflection.GetField<List<BluePrint>>(oldCarpenterMenu, "blueprints").SetValue(vanillaBlueprints);
-                oldCarpenterMenu.setNewActiveBlueprint();
             }
         }
 
@@ -281,23 +261,24 @@ namespace InteractionTweaks
 
         private static BluePrint NewBlueprint(BluePrint bluePrint)
         {
-            if (bluePrint.name.Equals("Stable"))
+            //compatibility with "Sauvignon in Stardew"
+            bool winery = bluePrint.name.Equals("Winery");
+            string name = winery ? "Slime Hutch" : bluePrint.name;
+
+            //the values are copied one-by-one to ensure compatibility with mods altering the list of blueprints
+            BluePrint newBlueprint = new BluePrint(name)
             {
-                BluePrint newBlueprint = new BluePrint(bluePrint.name)
-                {
-                    displayName = bluePrint.displayName,
-                    description = bluePrint.description,
-                    maxOccupants = bluePrint.maxOccupants,
-                    moneyRequired = bluePrint.moneyRequired,
-                    tilesWidth = bluePrint.tilesWidth,
-                    tilesHeight = bluePrint.tilesHeight,
-                    sourceRectForMenuView = bluePrint.sourceRectForMenuView,
-                    itemsRequired = bluePrint.itemsRequired
-                };
-                return newBlueprint;
-            }
-            else
-                return new BluePrint(bluePrint.name);
+                name = winery ? "Winery" : name,
+                displayName = bluePrint.displayName,
+                description = bluePrint.description,
+                maxOccupants = bluePrint.maxOccupants,
+                moneyRequired = bluePrint.moneyRequired,
+                tilesWidth = bluePrint.tilesWidth,
+                tilesHeight = bluePrint.tilesHeight,
+                sourceRectForMenuView = new Rectangle(bluePrint.sourceRectForMenuView.X, bluePrint.sourceRectForMenuView.Y, bluePrint.sourceRectForMenuView.Width, bluePrint.sourceRectForMenuView.Height),
+                itemsRequired = new Dictionary<int,int>(bluePrint.itemsRequired)
+            };
+            return newBlueprint;
         }
 
         private static int GetPrice(BluePrint bluePrint)
