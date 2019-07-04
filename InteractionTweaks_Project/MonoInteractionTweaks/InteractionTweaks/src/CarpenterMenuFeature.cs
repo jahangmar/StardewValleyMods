@@ -43,7 +43,7 @@ namespace InteractionTweaks
         private static int remainingWoodReq;
         private static int remainingStoneReq;
 
-        private static string hoverTextOn, hoverTextOff, ingredInfo;
+        private static string hoverTextOn, hoverTextOff, ingredInfoWood, ingredInfoStone;
 
         public static new void Enable()
         {
@@ -188,7 +188,7 @@ namespace InteractionTweaks
                     ingredient = woodObject.getOne();
                     ingredient.Stack = remainingWoodReq;
                     ingredient.drawInMenu(e.SpriteBatch, vector, 1f);
-                    Utility.drawTextWithShadow(e.SpriteBatch, ingredient.DisplayName + " " + ingredInfo, Game1.dialogueFont, new Vector2(vector.X + 64f + 16f, vector.Y + 20f), magicalConstruction ? Color.PaleGoldenrod : Game1.textColor, 1f, -1f, -1, -1, magicalConstruction ? 0f : 0.25f, 3);
+                    Utility.drawTextWithShadow(e.SpriteBatch, ingredInfoWood, Game1.dialogueFont, new Vector2(vector.X + 64f + 16f, vector.Y + 20f), magicalConstruction ? Color.PaleGoldenrod : Game1.textColor, 1f, -1f, -1, -1, magicalConstruction ? 0f : 0.25f, 3);
                     if (ingredient.Stack == 0)
                         Utility.drawTinyDigits(0, e.SpriteBatch, vector + new Vector2((float)(64 - Utility.getWidthOfTinyDigitString(0, 3f * 1f)) + 3f * 1f, 64f - 18f * 1f + 2f), 3f * 1f, 1f, Color.White);
                 }
@@ -199,7 +199,7 @@ namespace InteractionTweaks
                     ingredient = stoneObject.getOne();
                     ingredient.Stack = remainingStoneReq;
                     ingredient.drawInMenu(e.SpriteBatch, vector, 1f);
-                    Utility.drawTextWithShadow(e.SpriteBatch, ingredient.DisplayName + " " + ingredInfo, Game1.dialogueFont, new Vector2(vector.X + 64f + 16f, vector.Y + 20f), magicalConstruction ? Color.PaleGoldenrod : Game1.textColor, 1f, -1f, -1, -1, magicalConstruction ? 0f : 0.25f, 3);
+                    Utility.drawTextWithShadow(e.SpriteBatch, ingredInfoStone, Game1.dialogueFont, new Vector2(vector.X + 64f + 16f, vector.Y + 20f), magicalConstruction ? Color.PaleGoldenrod : Game1.textColor, 1f, -1f, -1, -1, magicalConstruction ? 0f : 0.25f, 3);
                     if (ingredient.Stack == 0)
                         Utility.drawTinyDigits(0, e.SpriteBatch, vector + new Vector2((float)(64 - Utility.getWidthOfTinyDigitString(0, 3f * 1f)) + 3f * 1f, 64f - 18f * 1f + 2f), 3f * 1f, 1f, Color.White);
                 }
@@ -221,7 +221,8 @@ namespace InteractionTweaks
             moneyButtonEnabled = false;
             hoverTextOn = Helper.Translation.Get("menu.carpentermoneybuttonon");
             hoverTextOff = Helper.Translation.Get("menu.carpentermoneybuttonoff");
-            ingredInfo = Helper.Translation.Get("menu.carpenteringredinfo");
+            ingredInfoWood = Helper.Translation.Get("menu.carpenteringredinfo", new { itemname = woodObject.DisplayName });
+            ingredInfoStone = Helper.Translation.Get("menu.carpenteringredinfo", new { itemname = stoneObject.DisplayName });
 
             cancelTexture = new ClickableTextureComponent("CMON", new Rectangle(carpenterMenu.xPositionOnScreen + carpenterMenu.width - IClickableMenu.borderWidth - IClickableMenu.spaceToClearSideBorder - 256 - 20 - 64 - 10 + 5, carpenterMenu.yPositionOnScreen + carpenterMenu.maxHeightOfBuildingViewer + 64 + 5, 64 - 8, 64 - 8), null, hoverTextOn, Game1.mouseCursors, new Microsoft.Xna.Framework.Rectangle(267, 469, 16, 16), 3.0f, false);
 
