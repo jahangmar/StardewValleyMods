@@ -25,10 +25,13 @@ namespace CompostPestsCultivation
         public const string _TempWaterTwoDays = "TempWaterTwoDays";
         public const string _TempWaterStop = "TempWaterStop";
 
-        public Dictionary<Vector2, List<Object>> CompostContents { get; set; } = new Dictionary<Vector2, List<Object>>();
-        public const string _CompostContents = "CompostContents";
+        public Dictionary<Vector2, List<Object>> ComposterContents { get; set; } = new Dictionary<Vector2, List<Object>>();
+        public const string _ComposterContents = "ComposterContents";
 
         public List<Vector2> CompostApplied { get; set; } = new List<Vector2>();
         public const string _CompostApplied = "CompostApplied";
+
+        public Dictionary<Vector2, bool> ComposterRunning { get; set; } = new Dictionary<Vector2, bool>();
+        public const string _ComposterRunning = "ComposterRunning";
     }
 }

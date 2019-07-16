@@ -28,7 +28,8 @@ using System.Linq;
 
 namespace CompostPestsCultivation
 {
-    public static class Pests {
+    public class Pests : ModComponent
+    {
         private static Config config;
         private static readonly List<Pest> pests = new List<Pest>();
         private static readonly Random rand = new Random();
@@ -238,6 +239,7 @@ namespace CompostPestsCultivation
             this.pos = pos;
             this.hd = hd;
 
+            /*
             this.adjacentTiles.Add(new Vector2(pos.X - 1, pos.Y));
             this.adjacentTiles.Add(new Vector2(pos.X - 1, pos.Y - 1));
             this.adjacentTiles.Add(new Vector2(pos.X - 1, pos.Y + 1));
@@ -246,6 +248,8 @@ namespace CompostPestsCultivation
             this.adjacentTiles.Add(new Vector2(pos.X + 1, pos.Y));
             this.adjacentTiles.Add(new Vector2(pos.X + 1, pos.Y - 1));
             this.adjacentTiles.Add(new Vector2(pos.X + 1, pos.Y + 1));
+            */
+            this.adjacentTiles = ModComponent.GetAdjacentTiles(pos);
 
             bfList = new List<PestFly>();
             bfList.Add(new PestFly(pos));
