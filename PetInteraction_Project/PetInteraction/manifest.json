@@ -1,8 +1,8 @@
 ﻿{
   "Name": "Pet Interaction",
   "Author": "jahangmar",
-  "Version": "1.0.0",
-  "Description": "Let you pet follow you, do silly stuff and play fetch",
+  "Version": "1.0.0-beta",
+  "Description": "Lets your pet follow you, do silly stuff, and play fetch",
   "UniqueID": "jahangmar.petinteraction",
   "MinimumApiVersion": "2.10.0",
   "EntryDll": "PetInteraction.dll",
