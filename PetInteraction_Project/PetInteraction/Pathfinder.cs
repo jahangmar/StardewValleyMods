@@ -39,6 +39,7 @@ namespace PetInteraction
         public static Queue<Vector2> CalculatePath(Pet pet, Vector2 dest)
         {
             Vector2 src = new Vector2((int)System.Math.Round(pet.position.X / Game1.tileSize), (int)System.Math.Round(pet.position.Y / Game1.tileSize));
+            dest = new Vector2((int)dest.X, (int)dest.Y);
 
             if (ModEntry.debug())
                 ModEntry.Log($"Trying to find path from {src} to {dest}", LogLevel.Trace);
@@ -183,9 +184,13 @@ namespace PetInteraction
             return MapSpecificTiles(tile) || IsPassableSingle(tile) && IsPassableSingle(new Node(tile.X + 1, tile.Y));
         }
 
-        private static bool IsPassableSingle(Node tile)
+        public static bool IsPassableSingle(Node tile, bool checkCharacters = true)
         {
+
             Rectangle tileRect = new Rectangle((int)tile.X*Game1.tileSize, (int)tile.Y*Game1.tileSize, Game1.tileSize, Game1.tileSize);
+
+            if (checkCharacters && Game1.player.GetBoundingBox().Intersects(tileRect))
+                return false;
 
             GameLocation location = Game1.currentLocation;
             Object obj = location.getObjectAtTile((int)tile.X, (int)tile.Y);
@@ -207,14 +212,17 @@ namespace PetInteraction
                 building = bgl.getBuildingAt(tile);
             }
 
-            foreach (Character c in location.characters)
+            if (checkCharacters)
             {
-                if (!(c is Pet) && c.GetBoundingBox().Intersects(tileRect))
+                foreach (Character c in location.characters)
                 {
-                    return false;
+                    if (!(c is Pet) && c.GetBoundingBox().Intersects(tileRect))
+                    {
+                        return false;
+                    }
                 }
             }
-            
+
             return location.isTilePassable(new xTile.Dimensions.Location((int)tile.X, (int)tile.Y), Game1.viewport)
                 && ((obj == null) || obj.isPassable())
                 && ((tf == null) || (tf.isPassable()))

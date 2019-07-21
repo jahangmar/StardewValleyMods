@@ -3,9 +3,9 @@
   "Author": "jahangmar",
   "Version": "1.0.0-beta",
   "Description": "Lets your pet follow you, do silly stuff, and play fetch",
-  "UniqueID": "jahangmar.petinteraction",
+  "UniqueID": "jahangmar.PetInteraction",
   "MinimumApiVersion": "2.10.0",
   "EntryDll": "PetInteraction.dll",
   "Dependencies": [],
-  "UpdateKeys": []
+  "UpdateKeys": [ "Nexus:4232" ]
 }

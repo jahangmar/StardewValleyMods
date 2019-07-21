@@ -31,7 +31,7 @@ namespace PetInteraction
 {
     public class ModEntry : Mod
     {
-        private const bool DEBUG_MODE = true;
+        private const bool DEBUG_MODE = false;
 
         private int catch_up_distance = 2;
 
@@ -65,8 +65,8 @@ namespace PetInteraction
                 helper.Events.Display.RenderedWorld += Display_RenderedWorld;
             helper.Events.Player.Warped += Player_Warped;
             helper.Events.GameLoop.UpdateTicking += GameLoop_UpdateTicking;
+            helper.Events.GameLoop.Saving += GameLoop_Saving;
 
-            helper.ConsoleCommands.Add("test", "", Test);//TODO remove
 
         }
 
@@ -105,12 +105,14 @@ namespace PetInteraction
             TempPet.currentLocation = Game1.getFarm();
             if (!Game1.getFarm().characters.Contains(TempPet))
                 Game1.warpCharacter(TempPet, Game1.getFarm(), new Vector2(0, 0));
+            Log("Adding TempPet");
         }
 
         private void RemoveTempPetFromFarm()
         {
             if (Game1.getFarm().characters.Contains(TempPet))
                 Game1.getFarm().characters.Remove(TempPet);
+            Log("Removing TempPet");
         }
 
         private class Comparer : IComparer<Vector2>
@@ -126,7 +128,7 @@ namespace PetInteraction
 
         void Display_RenderedWorld(object sender, StardewModdingAPI.Events.RenderedWorldEventArgs e)
         {
-            foreach (Vector2 vec in CatchUpPath)
+            foreach (Vector2 vec in CurrentPath)
                 e.SpriteBatch.Draw(Game1.mouseCursors, Game1.GlobalToLocal(Game1.viewport, vec * 64f), new Rectangle(194 + 0 * 16, 388, 16, 16), Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 0.999f);
             foreach (Vector2 vec in NonPassables)
                 e.SpriteBatch.Draw(Game1.mouseCursors, Game1.GlobalToLocal(Game1.viewport, vec * 64f), new Rectangle(194 + 1 * 16, 388, 16, 16), Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 0.999f);
@@ -134,23 +136,34 @@ namespace PetInteraction
                 e.SpriteBatch.Draw(Game1.mouseCursors, Game1.GlobalToLocal(Game1.viewport, vec * 64f), new Rectangle(194 + 0 * 16, 388, 16, 16), Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 0.999f);
         }
 
+        void GameLoop_Saving(object sender, StardewModdingAPI.Events.SavingEventArgs e)
+        {
+            //make sure the TestPet was removed
+            RemoveTempPetFromFarm();
+        }
+
 
         void GameLoop_DayStarted(object sender, StardewModdingAPI.Events.DayStartedEventArgs e)
         {
             pet = null;
             SetState(PetState.Vanilla);
+            hasFetchedToday = false;
+            if (GetPet() != null && !(Game1.getFarm().characters.Contains(pet) && !(Game1.getLocationFromName(Game1.player.homeLocation).characters.Contains(pet))))
+            {
+                pet.warpToFarmHouse(Game1.player);
+            }
         }
 
 
         void Input_ButtonPressed(object sender, StardewModdingAPI.Events.ButtonPressedEventArgs e)
         {
-            if (Game1.currentLocation == null || !Game1.player.hasPet() || GetPet() == null)
+            if (Game1.currentLocation == null || !Game1.player.hasPet() || GetPet() == null || Game1.activeClickableMenu != null)
                 return;
 
             bool PetClicked()
             {
                 Vector2 grabTile = e.Cursor.GrabTile;
-                return pet.GetBoundingBox().Intersects(new Rectangle((int)grabTile.X * Game1.tileSize, (int)grabTile.Y * Game1.tileSize, Game1.tileSize, Game1.tileSize));
+                return pet.yJumpOffset == 0 && pet.GetBoundingBox().Intersects(new Rectangle((int)grabTile.X * Game1.tileSize, (int)grabTile.Y * Game1.tileSize, Game1.tileSize, Game1.tileSize));
             }
 
             GameLocation loc = Game1.currentLocation;
@@ -197,16 +210,9 @@ namespace PetInteraction
                 }
 
 
-                //TODO throw
-                bool thrown = false;
-                if (Game1.player.ActiveObject?.ParentSheetIndex == Object.wood)
+                if (CanThrow(Game1.player.ActiveObject))
                 {
-                    Vector2 velocity = Utility.getVelocityTowardPoint(Game1.player.getTileLocation(), e.Cursor.Tile, config.pet_speed);
-                    WoodProjectile proj = new WoodProjectile(velocity);
-
-                    //proj.update
-                    Game1.currentLocation.projectiles.Add(proj);
-                    thrown = true;
+                    Throw(Game1.player.ActiveObject, e.Cursor.Tile);
                 }
                 else if (Game1.player.CurrentTool is Tool tool && tool != null && PetClicked() && !Game1.player.usingTool)
                 {
@@ -215,41 +221,11 @@ namespace PetInteraction
                             GetHitByTool();
                     }
                 }
-
-
-                switch (petState)
-                {
-                    case PetState.Vanilla:
-                        break;
-                    case PetState.CatchingUp:
-                    case PetState.Waiting:
-                        if (thrown)
-                            SetState(PetState.Fetching);
-                        break;
-                    case PetState.Chasing:
-                        break;
-                    case PetState.Fetching:
-                        break;
-                    case PetState.Retrieve:
-                        break;
-                }
+                               
             }
         }
 
-        class WoodProjectile : BasicProjectile {
-            public WoodProjectile(Vector2 velocity) : base(0, Object.wood, 0, 0, 1, velocity.X, velocity.Y, (Game1.player.getTileLocation() - new Vector2(0, -2)) * Game1.tileSize, "flameSpellHit", "flameSpell", false, false, Game1.currentLocation, Game1.player, true, HandleonCollisionBehavior)
-            {
-            }
-            public override bool isColliding(GameLocation location)
-            {
-                return base.isColliding(location) || travelTime > 1000;
-            }
 
-            static void HandleonCollisionBehavior(GameLocation location, int xPosition, int yPosition, Character who)
-            {
-                ModEntry.Log("X" + xPosition + ", Y" + yPosition);
-            }
-        }
 
         void GameLoop_OneSecondUpdateTicked(object sender, StardewModdingAPI.Events.OneSecondUpdateTickedEventArgs e)
         {
@@ -262,21 +238,16 @@ namespace PetInteraction
                     break;
                 case PetState.CatchingUp:
                 case PetState.Waiting:
-                    /*
-                    if (PlayerPetDistance() < catch_up_distance)
+                case PetState.Retrieve:
+                    if (PlayerPetDistance() > catch_up_distance && Game1.currentLocation == pet.currentLocation)
                     {
-                        SetState(PetState.Waiting);
-                    }
-                    */
-                    if (PlayerPetDistance() > catch_up_distance)
-                    {
-                        Sit();
-                        CatchUpPath = PathFinder.CalculatePath(pet, new Vector2(Game1.player.getTileX(), Game1.player.getTileY()));
+                        CurrentPath = PathFinder.CalculatePath(pet, new Vector2(Game1.player.getTileX(), Game1.player.getTileY()));
 
-                        if (CatchUpPath.Count > 0)
+                        if (CurrentPath.Count > 0)
                         {
-                            SetPetPositionFromTile(CatchUpPath.Peek());
-                            SetState(PetState.CatchingUp);
+                            SetPetPositionFromTile(CurrentPath.Peek());
+                            if (petState == PetState.Waiting)
+                                SetState(PetState.CatchingUp);
                         }
                         else
                         {
@@ -288,12 +259,14 @@ namespace PetInteraction
 
                     break;
                 case PetState.Chasing:
-                    break;
                 case PetState.Fetching:
-                    //TODO check if pet has reached destination, then pick item up, then retrieve
-                    break;
-                case PetState.Retrieve:
-                    //TODO check if pet has reached player, thenput item down
+                case PetState.WaitingToFetch:
+                    if (TimeOut())
+                    {
+                        Log("timeout during " + petState);
+                        Confused();
+                        SetState(PetState.Waiting);
+                    }
                     break;
             }
 
@@ -304,8 +277,9 @@ namespace PetInteraction
         {
             if (Game1.currentLocation == null || !Game1.player.hasPet() || GetPet() == null)
                 return;
-                
-            GetPet().CurrentBehavior = -1;
+
+            if (petState != PetState.Vanilla)    
+                GetPet().CurrentBehavior = -1;
         }
 
 
@@ -320,35 +294,60 @@ namespace PetInteraction
                     break;
                 case PetState.CatchingUp:
                 case PetState.Chasing:
+                case PetState.Fetching:
+                case PetState.Retrieve:
 
                     CatchUp();
 
-                    if (CatchUpPath.Count == 0)
+                    if (petState == PetState.Fetching && CurrentPath.Count == 4 && GetPet() is Cat cat)
+                        cat.leap(null);
+
+                    if (CurrentPath.Count == 0)
                     {
-                        if (petState == PetState.Chasing)
-                            Jump();
-                        SetState(PetState.Waiting);
+                        if (petState == PetState.Retrieve)
+                        {
+                            DropItem();
+                        }
+                        else if (petState == PetState.Fetching)
+                        {
+                            PickUpItem();
+                        }
+                        else
+                        {
+                            if (petState == PetState.Chasing)
+                                Jump();
+                            SetState(PetState.Waiting);
+                        }
                     }
 
                     else if (PetCurrentCatchUpGoalDistance() <= 4)
                     {
-                        Vector2 pos = CatchUpPath.Dequeue();
+                        Vector2 pos = CurrentPath.Dequeue();
                         SetPetPositionFromTile(pos);
                     }
                     break;
                 case PetState.Waiting:
                     break;
-                case PetState.Fetching:
-                    break;
-                case PetState.Retrieve:
-                    break;
             }
 
-            GetPet().CurrentBehavior = PetBehaviour;
+            if (petState != PetState.Vanilla)
+                GetPet().CurrentBehavior = PetBehaviour;
         }
 
         void Player_Warped(object sender, StardewModdingAPI.Events.WarpedEventArgs e)
         {
+            if (GetPet() == null)
+                return;
+
+            if (e.NewLocation is Farm)
+            {
+                RemoveTempPetFromFarm();
+            }
+            else
+            {
+                AddTempPetToFarm();
+            }
+
             if (petState == PetState.Vanilla)
                 return;
 
@@ -441,15 +440,6 @@ namespace PetInteraction
             else
             {
                 Monitor.Log("warped to unknown location: "+Game1.currentLocation.Name );
-            }
-
-            if (e.NewLocation is Farm)
-            {
-                RemoveTempPetFromFarm();
-            }
-            else
-            {
-                AddTempPetToFarm();
             }
         }
 
