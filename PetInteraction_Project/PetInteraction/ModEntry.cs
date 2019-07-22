@@ -39,9 +39,14 @@ namespace PetInteraction
 
         public static readonly Pet TempPet = new Cat()
         {
-            Name ="TempCat",
+            Name ="PetInteractionTempCat",
             displayName = "TempCatDisplay",
         };
+
+        public static bool IsTempPet(Pet pet)
+        {
+            return pet == TempPet || pet.Name == TempPet.Name;
+        }
 
         public static Config config;
 
@@ -67,37 +72,39 @@ namespace PetInteraction
             helper.Events.GameLoop.UpdateTicking += GameLoop_UpdateTicking;
             helper.Events.GameLoop.Saving += GameLoop_Saving;
 
-
+            //helper.ConsoleCommands.Add("fix_cat", "")
+            //helper.ConsoleCommands.Add("temppet","",HandleActionTempPet);
+            helper.ConsoleCommands.Add("check_pet", "", Test);
         }
 
         void Test(string name, string[] args)
         {
+            /*
             foreach (Character c in Game1.getFarm().characters)
             {
                 if (c is Pet p)
-                    Log("Found pet in Farm");
+                    Log("Found pet ("+p.Name+") in Farm");
             }
 
             foreach (Character c in Utility.getHomeOfFarmer(Game1.player).characters)
             {
                 if (c is Pet p)
-                    Log("Found pet in FarmHouse");
+                    Log("Found pet ("+p.Name+") in FarmHouse");
             }
-
+            */
             foreach (GameLocation location in Game1.locations)
                 foreach (Character c in location.characters)
                 {
                     if (c is Pet p)
-                        Log("Found pet in location "+location.Name);
+                        Log("Found pet ("+p.Name+") in location " + location.Name);
                 }
-
+            /*
             Log("pet.IsWalkingInSquare" + pet.IsWalkingInSquare);
             Log("pet.ignoreScheduleToday" + pet.ignoreScheduleToday);
             Log("pet.IsWalkingTowardPlayer" + pet.IsWalkingTowardPlayer);
             Log("pet.followSchedule" + pet.followSchedule);
             Log("pet.DirectionsToNewLocation is null" + (pet.DirectionsToNewLocation == null));
-            pet.followSchedule = false;
-            pet.DirectionsToNewLocation = null;
+            */
         }
 
         private void AddTempPetToFarm()
@@ -113,6 +120,18 @@ namespace PetInteraction
             if (Game1.getFarm().characters.Contains(TempPet))
                 Game1.getFarm().characters.Remove(TempPet);
             Log("Removing TempPet");
+
+            foreach (GameLocation location in Game1.locations)
+            {
+                for (int i=location.characters.Count-1; i>=0; i--)
+                {
+                    if (location.characters[i] is Pet p && IsTempPet(p))
+                    {
+                        Monitor.Log("Found temporary pet that should not be there. Fixed it.", LogLevel.Error);
+                        location.characters.RemoveAt(i);
+                    }
+                }
+            }
         }
 
         private class Comparer : IComparer<Vector2>
@@ -136,10 +155,22 @@ namespace PetInteraction
                 e.SpriteBatch.Draw(Game1.mouseCursors, Game1.GlobalToLocal(Game1.viewport, vec * 64f), new Rectangle(194 + 0 * 16, 388, 16, 16), Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 0.999f);
         }
 
-        void GameLoop_Saving(object sender, StardewModdingAPI.Events.SavingEventArgs e)
+        private void SafeState()
         {
             //make sure the TestPet was removed
             RemoveTempPetFromFarm();
+            //make sure your pet is at the farmhouse
+            if (GetPet() != null && !(Game1.getFarm().characters.Contains(pet) && !(Game1.getLocationFromName(Game1.player.homeLocation).characters.Contains(pet))))
+            {
+                pet.warpToFarmHouse(Game1.player);
+            }
+
+
+        }
+
+        void GameLoop_Saving(object sender, StardewModdingAPI.Events.SavingEventArgs e)
+        {
+            SafeState();
         }
 
 
@@ -157,7 +188,7 @@ namespace PetInteraction
 
         void Input_ButtonPressed(object sender, StardewModdingAPI.Events.ButtonPressedEventArgs e)
         {
-            if (Game1.currentLocation == null || !Game1.player.hasPet() || GetPet() == null || Game1.activeClickableMenu != null)
+            if (Game1.currentLocation == null || !Game1.player.hasPet() || GetPet() == null || Game1.activeClickableMenu != null || Game1.eventUp)
                 return;
 
             bool PetClicked()
@@ -166,13 +197,18 @@ namespace PetInteraction
                 return pet.yJumpOffset == 0 && pet.GetBoundingBox().Intersects(new Rectangle((int)grabTile.X * Game1.tileSize, (int)grabTile.Y * Game1.tileSize, Game1.tileSize, Game1.tileSize));
             }
 
+            bool NotGiftingTreat()
+            {
+                return !Helper.ModRegistry.IsLoaded("Paritee.TreatYourAnimals") || Game1.player.ActiveObject == null || Game1.player.ActiveObject.Edibility == -300;
+            }
+
             GameLocation loc = Game1.currentLocation;
             if (e.Button.IsActionButton())
             {
                 switch (petState)
                 {
                     case PetState.Vanilla:
-                        if (PetClicked() && Helper.Reflection.GetField<bool>(GetPet(), "wasPetToday").GetValue())
+                        if (PetClicked() && Helper.Reflection.GetField<bool>(GetPet(), "wasPetToday").GetValue() && NotGiftingTreat())
                         {
                             Helper.Input.Suppress(e.Button);
                             SetState(PetState.Waiting);
@@ -184,7 +220,7 @@ namespace PetInteraction
                     case PetState.Chasing:
                     case PetState.Fetching:
                     case PetState.Retrieve:
-                        if ((loc is Farm || loc is FarmHouse) && PetClicked())
+                        if ((loc is Farm || loc is FarmHouse) && PetClicked() && NotGiftingTreat())
                         {
                             Helper.Input.Suppress(e.Button);
                             SetState(PetState.Vanilla);
@@ -224,8 +260,6 @@ namespace PetInteraction
                                
             }
         }
-
-
 
         void GameLoop_OneSecondUpdateTicked(object sender, StardewModdingAPI.Events.OneSecondUpdateTickedEventArgs e)
         {
@@ -269,8 +303,8 @@ namespace PetInteraction
                     }
                     break;
             }
-
-            GetPet().CurrentBehavior = PetBehaviour;
+            if (petState != PetState.Vanilla)
+                GetPet().CurrentBehavior = PetBehaviour;
         }
 
         void GameLoop_UpdateTicking(object sender, StardewModdingAPI.Events.UpdateTickingEventArgs e)
@@ -414,11 +448,14 @@ namespace PetInteraction
 
                 Vector2 petTile = tryTiles.Find(PathFinder.IsPassable);
                 if (petTile != null)
+                {
                     Game1.warpCharacter(GetPet(), e.NewLocation, petTile);
+                    Log("Warped pet to " + petTile);
+                }
+
                 else
                     Log("Could not find position for pet", LogLevel.Error);
             }
-            
             else if (e.NewLocation is Farm)
             {
                 Game1.warpCharacter(GetPet(), "Farm", new Vector2(54f, 8f));
@@ -431,15 +468,17 @@ namespace PetInteraction
             }
             else if (e.NewLocation is MineShaft && !(e.OldLocation is MineShaft) || e.NewLocation is Woods /*|| e.NewLocation is Sewer*/)
             {
-                Game1.showGlobalMessage(Helper.Translation.Get("warp.todangerous", new { petname = GetPet().displayName }));
+                if (config.show_message_on_warp)
+                    Game1.showGlobalMessage(Helper.Translation.Get("warp.todangerous", new { petname = GetPet().displayName }));
             }
             else if (!e.NewLocation.isOutdoors && e.OldLocation.isOutdoors)
             {
-                Game1.showGlobalMessage(Helper.Translation.Get("warp.waitingoutside", new { petname = GetPet().displayName }));
+                if (config.show_message_on_warp)
+                    Game1.showGlobalMessage(Helper.Translation.Get("warp.waitingoutside", new { petname = GetPet().displayName }));
             }
             else
             {
-                Monitor.Log("warped to unknown location: "+Game1.currentLocation.Name );
+                Monitor.Log("warped to unknown location: "+Game1.currentLocation.Name, LogLevel.Trace);
             }
         }
 

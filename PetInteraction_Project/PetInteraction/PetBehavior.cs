@@ -110,7 +110,7 @@ namespace PetInteraction
 
         private static Pet FindPet()
         {
-            bool check(Character c) => c is Pet p && p != ModEntry.TempPet;
+            bool check(Character c) => c is Pet p && !ModEntry.IsTempPet(p);
 
             foreach (Character c in Game1.getFarm().characters)
             {
