@@ -37,6 +37,8 @@ namespace PetInteraction
 
         public static int PetBehaviour = -1;
 
+        private StardewModdingAPI.Events.WarpedEventArgs DelayedWarpedEventArgs = null;
+
         public static readonly Pet TempPet = new Cat()
         {
             Name ="PetInteractionTempCat",
@@ -45,7 +47,7 @@ namespace PetInteraction
 
         public static bool IsTempPet(Pet pet)
         {
-            return pet == TempPet || pet.Name == TempPet.Name;
+            return pet == TempPet || pet.Name == TempPet.Name || pet.Name == "TempCat";
         }
 
         public static Config config;
@@ -71,10 +73,32 @@ namespace PetInteraction
             helper.Events.Player.Warped += Player_Warped;
             helper.Events.GameLoop.UpdateTicking += GameLoop_UpdateTicking;
             helper.Events.GameLoop.Saving += GameLoop_Saving;
-
+            helper.Events.GameLoop.SaveLoaded += GameLoop_SaveLoaded;
             //helper.ConsoleCommands.Add("fix_cat", "")
             //helper.ConsoleCommands.Add("temppet","",HandleActionTempPet);
-            helper.ConsoleCommands.Add("check_pet", "", Test);
+
+            //helper.ConsoleCommands.Add("check_pet", "", Test);
+            //helper.ConsoleCommands.Add("new_temppet", "", temppet);
+        }
+
+        void temppet(string name, string[] args)
+        {
+            TempPet.currentLocation = Game1.getFarm();
+            Game1.warpCharacter(TempPet, Game1.getFarm(), new Vector2(0, 0));
+            Pet cat1 = new Cat()
+            {
+                Name = "PetInteractionTempCat",
+                displayName = "TempCatDisplay",
+                currentLocation = Game1.getFarm()
+            };
+            Game1.warpCharacter(cat1, Game1.getFarm(), new Vector2(0, 0));
+            Pet cat2 = new Cat()
+            {
+                Name = "TempCat",
+                displayName = "TempCatDisplay",
+                currentLocation = Game1.getFarm()
+            };
+            Game1.warpCharacter(cat2, Game1.getFarm(), new Vector2(0, 0));
         }
 
         void Test(string name, string[] args)
@@ -127,7 +151,7 @@ namespace PetInteraction
                 {
                     if (location.characters[i] is Pet p && IsTempPet(p))
                     {
-                        Monitor.Log("Found temporary pet that should not be there. Fixed it.", LogLevel.Error);
+                        Monitor.Log("Found temporary pet that should not be there ("+location.Name+"). Fixed it.", LogLevel.Debug);
                         location.characters.RemoveAt(i);
                     }
                 }
@@ -164,8 +188,6 @@ namespace PetInteraction
             {
                 pet.warpToFarmHouse(Game1.player);
             }
-
-
         }
 
         void GameLoop_Saving(object sender, StardewModdingAPI.Events.SavingEventArgs e)
@@ -173,6 +195,12 @@ namespace PetInteraction
             SafeState();
         }
 
+        void GameLoop_SaveLoaded(object sender, StardewModdingAPI.Events.SaveLoadedEventArgs e)
+        {
+            pet = null;
+            DelayedWarpedEventArgs = null;
+            SafeState();
+        }
 
         void GameLoop_DayStarted(object sender, StardewModdingAPI.Events.DayStartedEventArgs e)
         {
@@ -183,6 +211,7 @@ namespace PetInteraction
             {
                 pet.warpToFarmHouse(Game1.player);
             }
+            DelayedWarpedEventArgs = null;
         }
 
 
@@ -238,8 +267,8 @@ namespace PetInteraction
                         Monitor.Log("NONPASSABLE: " + e.Cursor.Tile);
                     }
 
-                    Passables.AddRange(PathFinder.GetPassableNeighbors(e.Cursor.Tile));
-                    if (PathFinder.IsPassable(e.Cursor.Tile) && !Passables.Contains(e.Cursor.Tile))
+                    Passables.AddRange(PathFinder.GetPassableNeighbors(e.Cursor.Tile, pet));
+                    if (PathFinder.IsPassable(e.Cursor.Tile, pet) && !Passables.Contains(e.Cursor.Tile))
                         Passables.Add(e.Cursor.Tile);
                     else if (!NonPassables.Contains(e.Cursor.Tile))
                         NonPassables.Add(e.Cursor.Tile);
@@ -265,6 +294,9 @@ namespace PetInteraction
         {
             if (Game1.currentLocation == null || !Game1.player.hasPet() || GetPet() == null)
                 return;
+
+            if (DelayedWarpedEventArgs != null)
+                Player_Warped(null, DelayedWarpedEventArgs);
 
             switch (petState)
             {
@@ -373,6 +405,19 @@ namespace PetInteraction
             if (GetPet() == null)
                 return;
 
+            if (Game1.player.isRidingHorse())
+            {
+                if (DelayedWarpedEventArgs == null)
+                {
+                    DelayedWarpedEventArgs = e;
+                    return;
+                }
+                else
+                {
+                    DelayedWarpedEventArgs = null;
+                }
+            }
+
             if (e.NewLocation is Farm)
             {
                 RemoveTempPetFromFarm();
@@ -385,21 +430,26 @@ namespace PetInteraction
             if (petState == PetState.Vanilla)
                 return;
 
+
             if (debug())
             {
                 Passables.Clear();
                 NonPassables.Clear();
             }
 
+            int PlayerTileX = Game1.player.isRidingHorse() ? Game1.player.mount.getTileX() : Game1.player.getTileX();
+            int PlayerTileY = Game1.player.isRidingHorse() ? Game1.player.mount.getTileY() : Game1.player.getTileY();
+
+            Vector2 PlayerTileLocation = new Vector2(PlayerTileX, PlayerTileY);
+
             bool EnteredLeftRight()
             {
-                //Log("Layerwidth " + e.NewLocation.map.GetLayer("Back").LayerWidth);
-                return Game1.player.getTileX() < 2 || Game1.player.getTileX() > e.NewLocation.map.GetLayer("Back").LayerWidth-2;
+                return PlayerTileX < 2 || PlayerTileX > e.NewLocation.map.GetLayer("Back").LayerWidth-2;
             }
 
             bool EnteredTopBot()
             {
-                return Game1.player.getTileY() < 2 || Game1.player.getTileY() > e.NewLocation.map.GetLayer("Back").LayerHeight-2;
+                return PlayerTileY < 2 || PlayerTileY > e.NewLocation.map.GetLayer("Back").LayerHeight-2;
             }
 
             if (e.NewLocation is Town
@@ -416,37 +466,38 @@ namespace PetInteraction
             {
                 List<Vector2> tryTiles = new List<Vector2>()
                 {
-                    Utility.recursiveFindOpenTileForCharacter(pet, e.NewLocation, Game1.player.getTileLocation(), 10)
+                    Utility.recursiveFindOpenTileForCharacter(pet, e.NewLocation, PlayerTileLocation, 10)
                 };
 
                 if (e.NewLocation is CommunityCenter)
                 {
-                    tryTiles.Insert(0, Game1.player.getTileLocation() - new Vector2(0, 5));
+                    tryTiles.Insert(0, PlayerTileLocation - new Vector2(0, 5));
                 }
                 else if ((e.NewLocation is Beach || e.NewLocation is BeachNightMarket) && e.OldLocation is Town)
                 {
-                    tryTiles.Insert(0, Game1.player.getTileLocation() + new Vector2(0, 5));
+                    tryTiles.Insert(0, PlayerTileLocation + new Vector2(0, 5));
                 }
                 else if (e.NewLocation is Town && (e.OldLocation is Beach || e.OldLocation is BeachNightMarket))
                 {
-                    tryTiles.Insert(0, Game1.player.getTileLocation() - new Vector2(0, 5));
-                    tryTiles.Insert(0, Game1.player.getTileLocation() - new Vector2(1, 5));
-                    tryTiles.Insert(0, Game1.player.getTileLocation() - new Vector2(-1, 5));
+                    tryTiles.Insert(0, PlayerTileLocation - new Vector2(0, 5));
+                    tryTiles.Insert(0, PlayerTileLocation - new Vector2(1, 5));
+                    tryTiles.Insert(0, PlayerTileLocation - new Vector2(-1, 5));
                 }
 
                 if (EnteredLeftRight())
                 {
-                    tryTiles.Insert(0, Game1.player.getTileLocation() + new Vector2(0, 1));
-                    tryTiles.Insert(0, Game1.player.getTileLocation() - new Vector2(0, 1));
+                    tryTiles.Insert(0, PlayerTileLocation + new Vector2(0, 1));
+                    tryTiles.Insert(0, PlayerTileLocation - new Vector2(0, 1));
                 }
 
                 if (EnteredTopBot())
                 {
-                    tryTiles.Insert(0, Game1.player.getTileLocation() + new Vector2(1, 0));
-                    tryTiles.Insert(0, Game1.player.getTileLocation() - new Vector2(1, 0));
+                    tryTiles.Insert(0, PlayerTileLocation + new Vector2(1, 0));
+                    tryTiles.Insert(0, PlayerTileLocation - new Vector2(1, 0));
                 }
 
-                Vector2 petTile = tryTiles.Find(PathFinder.IsPassable);
+                Vector2 petTile = tryTiles.Find(tile => PathFinder.IsPassable(tile, pet));
+                Log("Player loc: " + new Vector2(Game1.player.getTileX(), Game1.player.getTileY())+", horse: "+(Game1.player.isRidingHorse() ? new Vector2(Game1.player.mount.getTileX(), Game1.player.mount.getTileY()).ToString() : ""));
                 if (petTile != null)
                 {
                     Game1.warpCharacter(GetPet(), e.NewLocation, petTile);
@@ -473,7 +524,7 @@ namespace PetInteraction
             }
             else if (!e.NewLocation.isOutdoors && e.OldLocation.isOutdoors)
             {
-                if (config.show_message_on_warp)
+                if (config.show_message_on_warp && !e.NewLocation.isFarmBuildingInterior())
                     Game1.showGlobalMessage(Helper.Translation.Get("warp.waitingoutside", new { petname = GetPet().displayName }));
             }
             else

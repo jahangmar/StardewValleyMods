@@ -11,4 +11,19 @@
 	-added config option to disable messages on entering a location
 
 1.0.0-beta.2:
-	planned: following while mounted bug?, multiple pets, remove map-specific stuff
+	-removes all additional cats that were accidentally added by previous versions
+1.0.0-beta.3:
+	-fixed another case were a cat was accidentally teleported to the farmhouse
+
+1.0.0-beta.4:
+	-work-around for pet not correctly warping if player is on horse
+	-removed message when entering farm building
+	-better collision checks, no more map specific path finding
+
+next release (1.0.0-beta.4):	
+	-following while mounted bug [work-around]
+	-less messages (no while entering farm buildings) [done]
+	-remove	map-specific stuff [done] 
+	-multiple pets
+	-drop stick if pet has stick and begins chasing
+

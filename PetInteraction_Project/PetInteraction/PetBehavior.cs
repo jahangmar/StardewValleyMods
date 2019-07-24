@@ -52,7 +52,7 @@ namespace PetInteraction
 
 
 
-        private static bool throwing = false;
+        public static bool throwing = false;
 
         public static bool hasFetchedToday;
 
@@ -77,6 +77,7 @@ namespace PetInteraction
             switch (state)
             {
                 case PetState.Vanilla:
+                    throwing = false;
                     break;
                 case PetState.CatchingUp:
                     break;
@@ -94,6 +95,7 @@ namespace PetInteraction
                     SetTimer();
                     break;
                 case PetState.Retrieve:
+                    throwing = false;
                     break;
             }
         }
@@ -189,7 +191,9 @@ namespace PetInteraction
             }
             public override bool isColliding(GameLocation location)
             {
-                return !PathFinder.IsPassableSingle(position.Value / Game1.tileSize, false) || travelTime > 1000;
+                Rectangle rect = new Rectangle((int)position.Value.X + 1, (int)position.Value.Y + 1, Game1.tileSize - 2, Game1.tileSize - 2);
+
+                return travelTime > 1500 || !Game1.player.GetBoundingBox().Intersects(rect) && location.isCollidingPosition(rect, Game1.viewport, false, 0, false, null, false, false, true);
             }
 
             static void HandleonCollisionBehavior(GameLocation location, int xPosition, int yPosition, Character who)
