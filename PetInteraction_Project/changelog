@@ -15,15 +15,18 @@
 1.0.0-beta.3:
 	-fixed another case were a cat was accidentally teleported to the farmhouse
 
-1.0.0-beta.4:
-	-work-around for pet not correctly warping if player is on horse
+1.0.0:
+	-fixed pet not correctly warping if player is on horse
 	-removed message when entering farm building
 	-better collision checks, no more map specific path finding
+	-fixed name of pet in inventory
+	-added driftwood as throwable
+	-support for multiple pets (one can follow at a time)
+	-improved fetching and following behaviour
+	-improved pathfinding performance
 
-next release (1.0.0-beta.4):	
-	-following while mounted bug [work-around]
-	-less messages (no while entering farm buildings) [done]
-	-remove	map-specific stuff [done] 
-	-multiple pets
-	-drop stick if pet has stick and begins chasing
+
+TODO:
+	-no greetings by your pet to other people [no idea]
+	-better walking animation
 

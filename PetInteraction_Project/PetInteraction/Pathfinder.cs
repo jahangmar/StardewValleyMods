@@ -28,6 +28,9 @@ namespace PetInteraction
 {
     public class PathFinder
     {
+
+        private static readonly Dictionary<GameLocation, HashSet<Node>> cachedPassableTiles = new Dictionary<GameLocation, HashSet<Node>>();
+
         public static Queue<Vector2> CalculatePath(Pet pet, Vector2 dest)
         {
             Vector2 src = new Vector2((int)System.Math.Round(pet.position.X / Game1.tileSize), (int)System.Math.Round(pet.position.Y / Game1.tileSize));
@@ -37,22 +40,31 @@ namespace PetInteraction
                 ModEntry.Log($"Trying to find path from {src} to {dest}", LogLevel.Trace);
 
 
-            List<Vector2> alts = Utility.getAdjacentTileLocations(dest);
-            alts.Add(dest);
-            alts.Add(dest + new Vector2(-1, -1));
-            alts.Add(dest + new Vector2(1, 1));
-            alts.Add(dest + new Vector2(-1, 1));
-            alts.Add(dest + new Vector2(1, -1));
-            foreach (Vector2 alt in alts)
+            List<Vector2> addedTiles = Utility.getAdjacentTileLocations(dest);
+
+            Queue<Vector2> path = new Queue<Node>();
+
+            int loop = 0;
+            Queue<Node> lookatTiles = new Queue<Node>(addedTiles);
+            while (loop++ < 4)
             {
-                if (PathFinder.IsPassable(alt, pet))
+                Node curr = lookatTiles.Dequeue();
+                if (IsPassable(curr, pet))
                 {
-                    dest = alt;
-                    break;
+                    dest = curr;
+                    path = PathFinder.FindPath(src, dest, pet);
+                    if (path.Count > 0)
+                        break;
+                }
+                foreach (Node adj in Utility.getAdjacentTileLocations(curr))
+                {
+                    if (!addedTiles.Contains(adj))
+                    {
+                        lookatTiles.Enqueue(adj);
+                        addedTiles.Add(adj);
+                    }
                 }
             }
-
-            Queue<Vector2> path = PathFinder.FindPath(src, dest, pet);
 
             if (ModEntry.debug())
             {
@@ -61,6 +73,39 @@ namespace PetInteraction
                     ModEntry.Log(v.ToString(), LogLevel.Trace);
             }
             return new Queue<Vector2>(path.Take(path.Count - 1));
+        }
+
+        private static void AddCachedPassableTile(Node tile)
+        {
+            if (cachedPassableTiles.ContainsKey(Game1.currentLocation))
+                cachedPassableTiles[Game1.currentLocation].Add(tile);
+            else
+                cachedPassableTiles.Add(Game1.currentLocation, new HashSet<Node>() { tile });
+        }
+
+        public static void RemoveCachedPassableTile(Node tile)
+        {
+            if (cachedPassableTiles.ContainsKey(Game1.currentLocation))
+                cachedPassableTiles[Game1.currentLocation].Remove(tile);
+        }
+
+        private static bool IsCachedPassableTile(Node tile)
+        {
+            return cachedPassableTiles.ContainsKey(Game1.currentLocation) && cachedPassableTiles[Game1.currentLocation].Contains(tile);
+        }
+
+        public static void ResetCachedTiles()
+        {
+            foreach (GameLocation location in Game1.locations)
+                ResetCachedTiles(location);
+        }
+
+        public static void ResetCachedTiles(GameLocation location)
+        {
+            if (cachedPassableTiles.ContainsKey(location))
+                cachedPassableTiles[location].Clear();
+            else
+                cachedPassableTiles.Add(location, new HashSet<Node>());
         }
 
         private static Queue<Vector2> FindPath(Vector2 source, Vector2 destination, Pet pet)
@@ -168,14 +213,33 @@ namespace PetInteraction
                     if (!ModEntry.Passables.Contains(adj) && IsPassable(adj, pet))
                         ModEntry.Passables.Add(adj);
                 }
-            return adjacents.FindAll((Node node) => IsPassable(node, pet));
+
+            List<Node> passables = adjacents.FindAll((Node node) => IsPassable(node, pet));
+            return passables;
         }
 
-        public static bool IsPassable(Node tile, Pet pet) => IsPassableSingle(tile, pet) && IsPassableSingle(new Node(tile.X + 1, tile.Y), pet);
+        public static bool IsPassable(Node tile, Pet pet)
+        {
+            if (IsCachedPassableTile(tile))
+                return true;
+            else if (IsPassableSingle(tile, pet) && IsPassableSingle(new Node(tile.X + 1, tile.Y), pet))
+            {
+                AddCachedPassableTile(tile);
+                return true;
+            }
+            return false;
+        }
 
         public static bool IsPassableSingle(Node tile, Pet pet)
         {
-            return !(Game1.currentLocation.isCollidingPosition(new Rectangle((int)tile.X * Game1.tileSize + 1, (int)tile.Y * Game1.tileSize + 1, Game1.tileSize - 2, Game1.tileSize - 2), Game1.viewport, false, 0, false, pet, true, false, false));
+            Rectangle rect = new Rectangle((int)tile.X * Game1.tileSize + 1, (int)tile.Y * Game1.tileSize + 1, Game1.tileSize - 2, Game1.tileSize - 2);
+
+            //Vector2 plPos = Game1.player.Position;
+            //Game1.player.position.Set(new Vector2(-100, -100));
+            bool result = !(Game1.currentLocation.isCollidingPosition(rect, Game1.viewport, false, 0, false, pet, true, false, false));
+            //Game1.player.position.Set(plPos);
+
+            return result;
         }
 
     }
