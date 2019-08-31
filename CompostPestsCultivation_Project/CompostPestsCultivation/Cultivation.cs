@@ -25,6 +25,8 @@ namespace CompostPestsCultivation
 {
     public class Cultivation : ModComponent
     {
+        const int mixed_seeds_id = 770;
+
         public static Dictionary<int, List<CropTrait>> CropTraits = new Dictionary<int, List<CropTrait>>();
         public static Dictionary<int, int> CropSeeds = new Dictionary<int, int>();
 
@@ -66,6 +68,9 @@ namespace CompostPestsCultivation
         public static void NewSeeds(int id)
         {
             //ModEntry.GetMonitor().Log("checking key in cropseeds...");
+            if (id == mixed_seeds_id || new Crop(id, 0, 0).isWildSeedCrop())
+                return;
+
             if (CropSeeds.ContainsKey(id))
                 CropSeeds[id] += 1;
             else
@@ -402,7 +407,7 @@ namespace CompostPestsCultivation
                 {
                     if (crop.isWildSeedCrop())
                     {
-                        //TODO
+
                     }
                     else
                     {

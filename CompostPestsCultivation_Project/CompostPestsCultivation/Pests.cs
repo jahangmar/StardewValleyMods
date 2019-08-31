@@ -107,15 +107,19 @@ namespace CompostPestsCultivation
         public static void DrawPests(SpriteBatch spriteBatch)
         {
             if (Game1.currentLocation is Farm)
-            foreach (Pest pest in pests)
             {
-                pest.Draw(spriteBatch);
+                foreach (Pest pest in pests)
+                {
+                    pest.Draw(spriteBatch);
+                }
+
+                pests.RemoveAll(p => p.CropDestroyed());
             }
         }
 
         public static Pest TryInfestCrop(Vector2 pos, HoeDirt hd)
         {
-            if (hd == null || hd != null && hd.crop == null || hd.crop.dead.Value || pests.Exists((Pest p) => p.HasPosition(pos)))
+            if (hd == null || hd != null && hd.crop == null || hd.crop.dead.Value || hd.crop.isWildSeedCrop() || pests.Exists((Pest p) => p.HasPosition(pos)))
                 return null;
 
             List<CropTrait> traits = Cultivation.GetTraits(hd.crop);
@@ -298,6 +302,8 @@ namespace CompostPestsCultivation
 
             return Cultivation.UngrowCrop(hd.crop, pos, "Pest");
         }
+
+        public bool CropDestroyed() => hd.crop == null;
 
         private List<KeyValuePair<Vector2, TerrainFeature>> GetAdjacentCrops()
         {
