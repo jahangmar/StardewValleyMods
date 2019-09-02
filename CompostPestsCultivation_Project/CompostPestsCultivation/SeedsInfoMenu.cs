@@ -62,7 +62,7 @@ namespace CompostPestsCultivation
             base.draw(b);
             if ((int)ModEntry.GetHelper().Reflection.GetField<float>(this, "scale").GetValue() == 1)
             {
-                SpriteText.drawString(b, "Traits for " + seeds.DisplayName + ":", xPositionOnScreen + 32, yPositionOnScreen + 32, 999999, width - 64, 999999, 0.75f, 0.865f, false, -1, "", -1/*8 7*/);
+                SpriteText.drawString(b, ModEntry.GetHelper().Translation.Get("cult.msg_headline_traitinfo",  new { seeds = seeds.DisplayName }), xPositionOnScreen + 32, yPositionOnScreen + 32, 999999, width - 64, 999999, 0.75f, 0.865f, false, -1, "", -1/*8 7*/);
 
                 if (cropObj.isWildSeedCrop())
                 {

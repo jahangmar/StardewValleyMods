@@ -92,24 +92,25 @@ namespace CompostPestsCultivation
 
         void GameLoop_SaveLoaded(object sender, StardewModdingAPI.Events.SaveLoadedEventArgs e)
         {
-            SaveData data = Helper.Data.ReadSaveData<SaveData>(nameof(SaveData));
-            if (data == null)
+            SaveData data = null;
+            try
             {
-                Monitor.Log($"No save data with key '{nameof(SaveData)}' found");
-                data = new SaveData();
+                data = Helper.Data.ReadSaveData<SaveData>(nameof(SaveData));
+
             }
+            finally
+            {
+                if (data == null)
+                {
+                    Monitor.Log($"No save data with key '{nameof(SaveData)}' found");
+                    data = new SaveData();
+                }
+                data.InitNullValues();
 
-            Composting.Load(data);
-            Cultivation.Load(data);
-            Pests.Load(data);
-
-
-            /*
-            for (int i = 0; i < 10; i++)
-                Helper.ConsoleCommands.Trigger("player_add", new string[2] { "name", "Seed Maker" });
-            Helper.ConsoleCommands.Trigger("player_add", new string[3] { "name", "Melon", "100" });
-
-            */           
+                Composting.Load(data);
+                Cultivation.Load(data);
+                Pests.Load(data);
+            }         
         }
 
         void Input_ButtonPressed(object sender, StardewModdingAPI.Events.ButtonPressedEventArgs e)
@@ -268,9 +269,9 @@ namespace CompostPestsCultivation
 
 }
 
-//TODO Add More compostable items
-//TODO C/N or Brown/Green
-//TODO deutsche Übersetzung
+//TODO Bug: Pumpkins have full traits but still ungrow.
+//TODO test cultivation effects
+
 //TODO Test functionality
 //TODO Test Design
 
@@ -293,6 +294,12 @@ namespace CompostPestsCultivation
 //staying watered 1
 //staying watered 2
 
+
+//Greenhouse:
+//Quality level base is 0
+//Speed level base is 1
+//Resistance ignored
+//Water base is 1
 
 //Wild Seed Crops are can not gain traits but also have no negative effects and are resistant against pests.
 //Mixed Seeds can not gain traits

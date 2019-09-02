@@ -79,7 +79,7 @@ namespace CompostPestsCultivation
         public static int GetGreen(Item item) => item == null ? 0 : GetGreenBrown(item).Green;
         public static int GetBrown(Item item) => item == null ? 0 : GetGreenBrown(item).Brown;
 
-        public static float GetParts(Item item) => (GetGreen(item) + GetBrown(item)) / one_part;
+        public static float GetParts(Item item) => (float)(GetGreen(item) + GetBrown(item)) / one_part;
 
         public static void Init(Config conf)
         {
@@ -194,7 +194,10 @@ namespace CompostPestsCultivation
                 if (ComposterDaysLeft[vec] <= 0)
                 {
                     ComposterDaysLeft.Remove(vec);
-                    int left = ComposterContents[vec].Sum((Item arg) => arg == null ? 0 : (int) GetParts(arg) * arg.Stack);
+                    int left = ComposterContents[vec].Sum((Item arg) => arg == null ? 0 : (int) (100 * GetParts(arg) * arg.Stack)) / 100;
+                    ModEntry.GetMonitor().Log($"Added {left} compost part to {vec}", StardewModdingAPI.LogLevel.Trace);
+                    //ModEntry.GetMonitor().Log($"ComposterContents[{vec}].Count == {ComposterContents[vec].Count}");
+                    //ComposterContents[vec].ForEach((Item obj) => { if (obj != null) ModEntry.GetMonitor().Log("Found item " + obj.Name + "x" + obj.Stack + ", "+GetParts(obj)+" parts"); });
                     if (ComposterCompostLeft.ContainsKey(vec))
                         ComposterCompostLeft[vec] = left;
                     else
