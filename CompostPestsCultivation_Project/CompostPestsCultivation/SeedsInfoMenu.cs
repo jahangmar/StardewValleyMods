@@ -34,10 +34,13 @@ namespace CompostPestsCultivation
 
         private List<CropTrait> drawTraits;
 
-        public SeedsInfoMenu(StardewValley.Object seeds, StardewValley.Object crop) : base(" ")
+        private readonly bool withCompost;
+
+        public SeedsInfoMenu(StardewValley.Object seeds, StardewValley.Object crop, bool withCompost) : base(" ")
         {
             this.seeds = seeds;
             this.crop = crop;
+            this.withCompost = withCompost;
 
             cropObj = new Crop(seeds.ParentSheetIndex, 0, 0);
 
@@ -55,6 +58,35 @@ namespace CompostPestsCultivation
 
                 return true;
             }).ToList();
+
+            AddMissingTraits(drawTraits);
+
+            if (withCompost)
+                IncreaseTraits(drawTraits);
+        }
+
+        private void AddMissingTraits(List<CropTrait> traits)
+        {
+            if (!(traits.Contains(CropTrait.PestResistanceI) || traits.Contains(CropTrait.PestResistanceII)))
+                traits.Add(CropTrait.PestResistanceNo);
+            if (!(traits.Contains(CropTrait.WaterI) || traits.Contains(CropTrait.WaterII)))
+                traits.Add(CropTrait.WaterNo);
+            if (!(traits.Contains(CropTrait.SpeedI) || traits.Contains(CropTrait.SpeedII)))
+                traits.Add(CropTrait.SpeedNo);
+            if (!(traits.Contains(CropTrait.QualityI) || traits.Contains(CropTrait.QualityII)))
+                traits.Add(CropTrait.QualityNo);
+        }
+
+        private void IncreaseTraits(List<CropTrait> traits)
+        {
+            CropTrait incTrait(CropTrait trait)
+            {
+                if (trait == CropTrait.PestResistanceII || trait == CropTrait.QualityII)
+                    return trait;
+                return trait + 1;
+            }
+
+            drawTraits = traits.Select(incTrait).ToList();
         }
 
         public override void draw(SpriteBatch b)
@@ -62,7 +94,7 @@ namespace CompostPestsCultivation
             base.draw(b);
             if ((int)ModEntry.GetHelper().Reflection.GetField<float>(this, "scale").GetValue() == 1)
             {
-                SpriteText.drawString(b, ModEntry.GetHelper().Translation.Get("cult.msg_headline_traitinfo",  new { seeds = seeds.DisplayName }), xPositionOnScreen + 32, yPositionOnScreen + 32, 999999, width - 64, 999999, 0.75f, 0.865f, false, -1, "", -1/*8 7*/);
+                SpriteText.drawString(b, ModEntry.GetHelper().Translation.Get(withCompost ? "cult.msg_headline_traitinfo_compost" : "cult.msg_headline_traitinfo",  new { seeds = seeds.DisplayName }), xPositionOnScreen + 32, yPositionOnScreen + 32, 999999, width - 64, 999999, 0.75f, 0.865f, false, -1, "", -1/*8 7*/);
 
                 if (cropObj.isWildSeedCrop())
                 {
@@ -76,8 +108,8 @@ namespace CompostPestsCultivation
                         //SpriteText.drawString(b, Cultivation.GetTraitLongDescr(drawTraits[i - 1]), xPositionOnScreen + 32 + 32, (i+1) * 2 * 48 + yPositionOnScreen + 32, 999999, width - 64, 999999, 0.75f, 0.865f, false, -1, "", -1/*8 7*/);
                     }
 
-                    if (drawTraits.Count == 0)
-                        SpriteText.drawString(b, ModEntry.GetHelper().Translation.Get("cult.msg_non"), xPositionOnScreen + 32, 2 * (48 + 16) + yPositionOnScreen + 32, 999999, width - 64, 999999, 0.75f, 0.865f, false, -1, "", -1/*8 7*/);
+                    //if (drawTraits.Count == 0)
+                    //    SpriteText.drawString(b, ModEntry.GetHelper().Translation.Get("cult.msg_non"), xPositionOnScreen + 32, 2 * (48 + 16) + yPositionOnScreen + 32, 999999, width - 64, 999999, 0.75f, 0.865f, false, -1, "", -1/*8 7*/);
                 }
             }
 

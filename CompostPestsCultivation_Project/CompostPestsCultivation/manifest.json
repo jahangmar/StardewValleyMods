@@ -7,5 +7,5 @@
   "MinimumApiVersion": "2.10.0",
   "EntryDll": "CompostPestsCultivation.dll",  
   "Dependencies": [],
-  "UpdateKeys": []
+  "UpdateKeys": [ "Nexus:4446" ]
 }

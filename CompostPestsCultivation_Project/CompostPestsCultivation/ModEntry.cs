@@ -123,20 +123,28 @@ namespace CompostPestsCultivation
             //Monitor.Log("3" + obj2.Name.Equals("Seed Maker"));
             //Monitor.Log("4" + (obj2.heldObject?.Value != null));
             //Monitor.Log("5" + obj2.heldObject.Value.CanBeGrabbed);
-            if (Game1.currentLocation != null && Game1.activeClickableMenu == null && Game1.currentLocation.getObjectAtTile((int)grabTile.X, (int)grabTile.Y) is Object obj && obj != null &&
-            e.Button.IsActionButton() && obj.Name.Equals("Seed Maker"))
+            if (Game1.currentLocation != null && Game1.activeClickableMenu == null && e.Button.IsActionButton())
             {
-                if (obj.heldObject?.Value != null && obj.heldObject?.Value.Category == Object.SeedsCategory && obj.readyForHarvest && Game1.player.couldInventoryAcceptThisObject(obj.heldObject.Value.ParentSheetIndex, obj.heldObject.Value.Stack))
+                if (Game1.currentLocation.getObjectAtTile((int)grabTile.X, (int)grabTile.Y) is Object obj && obj != null && obj.Name.Equals("Seed Maker"))
                 {
-                    //Monitor.Log("Detected Seeds in Seed Maker", LogLevel.Alert);
-                    Cultivation.NewSeeds(obj.heldObject.Value.ParentSheetIndex);
+                    if (obj.heldObject?.Value != null && obj.heldObject?.Value.Category == Object.SeedsCategory && obj.readyForHarvest && Game1.player.couldInventoryAcceptThisObject(obj.heldObject.Value.ParentSheetIndex, obj.heldObject.Value.Stack))
+                    {
+                        //Monitor.Log("Detected Seeds in Seed Maker", LogLevel.Alert);
+                        Cultivation.NewSeeds(obj.heldObject.Value.ParentSheetIndex);
+                    }
+                    else if (obj.heldObject?.Value == null && Game1.player.ActiveObject?.Category == Object.SeedsCategory)
+                    {
+                        if (Cultivation.GetCropItemFromSeeds(Game1.player.ActiveObject) is Object crop)
+                            Game1.activeClickableMenu = new SeedsInfoMenu(Game1.player.ActiveObject, crop, false);
+                    }
                 }
-                else if (obj.heldObject?.Value == null && Game1.player.ActiveObject?.Category == Object.SeedsCategory)
+                else if (Game1.currentLocation is Farm farm && farm.getBuildingAt(grabTile) is CompostingBin && Game1.player.ActiveObject?.Category == Object.SeedsCategory)
                 {
                     if (Cultivation.GetCropItemFromSeeds(Game1.player.ActiveObject) is Object crop)
-                        Game1.activeClickableMenu = new SeedsInfoMenu(Game1.player.ActiveObject, crop);
+                        Game1.activeClickableMenu = new SeedsInfoMenu(Game1.player.ActiveObject, crop, true);
                 }
             }
+
 
             /*if (e.Button.IsActionButton() && Game1.currentLocation is Farm farm && Game1.activeClickableMenu == null && Composting.IsComposter(farm.getBuildingAt(grabTile)))
             {
@@ -268,12 +276,6 @@ namespace CompostPestsCultivation
 
 
 }
-
-//TODO Bug: Pumpkins have full traits but still ungrow.
-//TODO test cultivation effects
-
-//TODO Test functionality
-//TODO Test Design
 
 //Effects
 //0: normal Quality

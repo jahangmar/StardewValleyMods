@@ -109,7 +109,21 @@ namespace CompostPestsCultivation
             return result;
         }
 
-        private static CropTrait GetRandomTrait() => (CropTrait)System.Enum.GetValues(typeof(CropTrait)).GetValue(GetRandomInt(System.Enum.GetValues(typeof(CropTrait)).Length));
+        private static CropTrait GetRandomTrait()
+        {
+            List<CropTrait> traits = new List<CropTrait>()
+            {
+                CropTrait.PestResistanceI,
+                CropTrait.PestResistanceII,
+                CropTrait.QualityI,
+                CropTrait.QualityII,
+                CropTrait.SpeedI,
+                CropTrait.SpeedII,
+                CropTrait.WaterI,
+                CropTrait.SpeedII
+            };
+            return traits[GetRandomInt(traits.Count)];
+        }
 
         private static string CropSeedsDisplayName(int id) => ObjectFactory.getItemFromDescription(ObjectFactory.regularObject, id, 1).DisplayName;
 
@@ -118,17 +132,23 @@ namespace CompostPestsCultivation
             ITranslationHelper trans = ModEntry.GetHelper().Translation;
             switch (trait)
             {
+                case CropTrait.PestResistanceNo:
                 case CropTrait.PestResistanceI:
                 case CropTrait.PestResistanceII:
                     return trans.Get("cult.msg_traitdesc_pestres");
+                case CropTrait.QualityNo:
                 case CropTrait.QualityI:
                 case CropTrait.QualityII:
                     return trans.Get("cult.msg_traitdesc_quality");
+                case CropTrait.WaterNo:
                 case CropTrait.WaterI:
                 case CropTrait.WaterII:
+                case CropTrait.WaterIII:
                     return trans.Get("cult.msg_traitdesc_water");
+                case CropTrait.SpeedNo:
                 case CropTrait.SpeedI:
                 case CropTrait.SpeedII:
+                case CropTrait.SpeedIII:
                     return trans.Get("cult.msg_traitdesc_speed");
                 default:
                     return "ERROR gettraitdescr";
@@ -140,22 +160,34 @@ namespace CompostPestsCultivation
             ITranslationHelper trans = ModEntry.GetHelper().Translation;
             switch (trait)
             {
+                case CropTrait.PestResistanceNo:
+                    return trans.Get("cult.msg_traitlongdesc_pestresno");
                 case CropTrait.PestResistanceI:
                     return trans.Get("cult.msg_traitlongdesc_pestresI");
                 case CropTrait.PestResistanceII:
                     return trans.Get("cult.msg_traitlongdesc_pestresII");
+                case CropTrait.QualityNo:
+                    return trans.Get("cult.msg_traitlongdesc_qualityno");
                 case CropTrait.QualityI:
                     return trans.Get("cult.msg_traitlongdesc_qualityI");
                 case CropTrait.QualityII:
                     return trans.Get("cult.msg_traitlongdesc_qualityII");
+                case CropTrait.WaterNo:
+                    return trans.Get("cult.msg_traitlongdesc_waterno");
                 case CropTrait.WaterI:
                     return trans.Get("cult.msg_traitlongdesc_waterI");
                 case CropTrait.WaterII:
                     return trans.Get("cult.msg_traitlongdesc_waterII");
+                case CropTrait.WaterIII:
+                    return trans.Get("cult.msg_traitlongdesc_waterIII");
+                case CropTrait.SpeedNo:
+                    return trans.Get("cult.msg_traitlongdesc_speedno");
                 case CropTrait.SpeedI:
                     return trans.Get("cult.msg_traitlongdesc_speedI");
                 case CropTrait.SpeedII:
                     return trans.Get("cult.msg_traitlongdesc_speedII");
+                case CropTrait.SpeedIII:
+                    return trans.Get("cult.msg_traitlongdesc_speedIII");
                 default:
                     return "ERROR gettraitlongdescr";
             }
@@ -166,22 +198,34 @@ namespace CompostPestsCultivation
             ITranslationHelper trans = ModEntry.GetHelper().Translation;
             switch (trait)
             {
+                case CropTrait.PestResistanceNo:
+                    return trans.Get("cult.msg_trait_pestresno");
                 case CropTrait.PestResistanceI:
                     return trans.Get("cult.msg_trait_pestresI");
                 case CropTrait.PestResistanceII:
                     return trans.Get("cult.msg_trait_pestresII");
+                case CropTrait.QualityNo:
+                    return trans.Get("cult.msg_trait_qualityno");
                 case CropTrait.QualityI:
                     return trans.Get("cult.msg_trait_qualityI");
                 case CropTrait.QualityII:
                     return trans.Get("cult.msg_trait_qualityII");
+                case CropTrait.WaterNo:
+                    return trans.Get("cult.msg_trait_waterno");
                 case CropTrait.WaterI:
                     return trans.Get("cult.msg_trait_waterI");
                 case CropTrait.WaterII:
                     return trans.Get("cult.msg_trait_waterII");
+                case CropTrait.WaterIII:
+                    return trans.Get("cult.msg_trait_waterIII");
+                case CropTrait.SpeedNo:
+                    return trans.Get("cult.msg_trait_speedno");
                 case CropTrait.SpeedI:
                     return trans.Get("cult.msg_trait_speedI");
                 case CropTrait.SpeedII:
                     return trans.Get("cult.msg_trait_speedII");
+                case CropTrait.SpeedIII:
+                    return trans.Get("cult.msg_trait_speedIII");
                 default:
                     return "ERROR gettraitname";
             }
@@ -195,6 +239,7 @@ namespace CompostPestsCultivation
             {
                 ModEntry.GetMonitor().Log($"Added {trait} to {CropSeedsDisplayName(id)}", LogLevel.Trace);
                 Game1.showGlobalMessage(trans.Get("cult.msg_traitinc", new { traitdesc = GetTraitDescr(trait), seed = CropSeedsDisplayName(id), trait = GetTraitName(trait) }));
+                Game1.playSound("achievement");
                 traits.Add(trait);
                 CropTraits[id] = traits;
             }
@@ -397,16 +442,22 @@ namespace CompostPestsCultivation
 
         public static List<CropTrait> GetTraits(Crop crop)
         {
-            int seedIdx = crop.netSeedIndex.Value;
+            int seedIdx = GetSeedIdxFromCrop(crop);
             if (!Cultivation.CropTraits.TryGetValue(seedIdx, out List<CropTrait> traits))
             {
                 traits = new List<CropTrait>();
+                //ModEntry.GetMonitor().Log($"No traits for idx {seedIdx} found", LogLevel.Trace);
+            }
+            else
+            {
+                //ModEntry.GetMonitor().Log($"Traits for idx {seedIdx} found", LogLevel.Trace);
             }
             return traits;
         }
 
         public static StardewValley.Object GetCropItemFromSeeds(StardewValley.Object seeds)
         {
+            //maps seed idx -> info containing crop idx
             Dictionary<int, string> dictionary = Game1.temporaryContent.Load<Dictionary<int, string>>("Data\\Crops");
             foreach (KeyValuePair<int, string> item in dictionary)
             {
@@ -417,6 +468,22 @@ namespace CompostPestsCultivation
                 }
             }
             return null;
+        }
+
+        public static int GetSeedIdxFromCrop(Crop crop)
+        {
+            //maps seed idx -> info containing crop idx
+            Dictionary<int, string> dictionary = Game1.temporaryContent.Load<Dictionary<int, string>>("Data\\Crops");
+            foreach (KeyValuePair<int, string> item in dictionary)
+            {
+                int seedIdx = item.Key;
+                int cropIdx = System.Convert.ToInt32(item.Value.Split('/')[3]);
+                if (cropIdx == crop.indexOfHarvest.Value)
+                {
+                    return seedIdx;
+                }
+            }
+            return -1;
         }
 
         public static void OnEndDay()
@@ -433,7 +500,7 @@ namespace CompostPestsCultivation
                 else if (location.IsGreenhouse)
                     locationName = GreenhouseName;
 
-                ModEntry.GetMonitor().Log("Running Cultivation.OnEndDay for " + locationName);
+                ModEntry.GetMonitor().Log("Running Cultivation.OnEndDay for " + locationName, LogLevel.Trace);
 
                 foreach (KeyValuePair<Vector2, TerrainFeature> pair in location.terrainFeatures.Pairs)
                 {
@@ -446,6 +513,10 @@ namespace CompostPestsCultivation
                         else
                         {
                             List<CropTrait> traits = GetTraits(crop);
+
+                            //ModEntry.GetMonitor().Log($"Traits for {vec}: ");
+                            //traits.ForEach((CropTrait obj) => ModEntry.GetMonitor().Log(obj.ToString()));
+                            //ModEntry.GetMonitor().Log($"GetWater returns "+GetWater(vec, traits, location.IsGreenhouse));
 
                             switch (GetQuality(vec, traits, location.IsGreenhouse))
                             {
@@ -533,7 +604,7 @@ namespace CompostPestsCultivation
                 else if (location.IsGreenhouse)
                     locationName = GreenhouseName;
 
-                ModEntry.GetMonitor().Log("Running Cultivation.OnNewDay for " + locationName);
+                ModEntry.GetMonitor().Log("Running Cultivation.OnNewDay for " + locationName, LogLevel.Trace);
 
                 //Spawn weeds
                 if (location.IsFarm && !Game1.IsWinter)
