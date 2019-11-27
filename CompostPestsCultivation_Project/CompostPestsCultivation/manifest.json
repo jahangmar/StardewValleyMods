@@ -4,7 +4,7 @@
   "Version": "1.1.0",
   "Description": "Introduces pests and other negative effects for crops while giving the farmer new tools to make crops stronger",
   "UniqueID": "jahangmar.CompostPestsCultivation",
-  "MinimumApiVersion": "2.10.0",
+  "MinimumApiVersion": "3.0.0",
   "EntryDll": "CompostPestsCultivation.dll",  
   "Dependencies": [],
   "UpdateKeys": [ "Nexus:4446" ]

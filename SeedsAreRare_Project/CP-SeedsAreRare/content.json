@@ -77,6 +77,43 @@
 			  "0": "@,^I'm really glad you've become part of our community! I've enclosed a 500g check from the Stardew Valley Agricultural Fund to help you continue your good work. ^Maybe you can buy some more farming supplies with it.  ^  Sincerely, Mr. Lewis%item money 500 501 %%"
 		}
 	  }
+      },
+      {
+          "Action": "EditData",
+          "Target": "Data/Festivals/summer28",
+	  "When": {
+		"Language": "en"
+	  },
+          "Fields": {
+		"Pierre": {
+			  "0": "Psst... Make sure to swing by the shop tomorrow to get your supplies for the fall!"
+		}
+	  }
+	
+      },
+      {
+          "Action": "EditData",
+          "Target": "Data/Events/Farm",
+	  "When": {
+		"Language": "en"
+	  },
+          "Entries": {
+		"102/z spring/z summer/z fall/d Mon Tue Wed Thu Fri Sat/y 1/H": "continue/64 15/farmer 64 16 2 Pierre 64 18 0/broadcastEvent/pause 1500/speak Pierre \"Hello there, @. So! Your first year in Stardew Valley is almost over, huh?#$b#If you keep buying products from me, you'll be twice as productive next year!$h#$b#...Well, that's all I wanted to say. Have a good one.\"/pause 300/move Pierre 0 1 2/pause 1000/faceDirection Pierre 0/speak Pierre \"You know... I wouldn't even bother trying my competitor's products.$u#$b# Pierre's products are the *highest* quality products you'll find anywhere. That's a promise.$h\"pause 500/end"
+	  }
+	},
+	{
+          "Action": "EditData",
+          "Target": "Data/TV/TipChannel",
+	  "When": {
+		"Language": "en"
+	  },
+          "Fields": {
+		"Pierre": {
+			  "53": "Fall's almost here! It's arguably the most lucrative season for farmers, so make sure to save enough seeds. If you haven't upgraded your watering can by now, it's probably a good idea."
+		}
+	  }
+	
       }
+
   ]
 }
