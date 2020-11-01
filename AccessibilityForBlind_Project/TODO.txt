@@ -1,0 +1,13 @@
+﻿Main Tasks:
+I. implement keyboard controls and tts for all menus
+II. implement sound design for in-game (collisions, interactable objects)
+
+
+
+I.
+-bug: wilderness farm tts doesn't work
+-implement in-game main menu
+
+II.
+-detect collision type (object or map wall)
+    -> further distinguish between types. how to do this with tiles?

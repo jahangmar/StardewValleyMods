@@ -1,0 +1,11 @@
+﻿{
+  "Name": "AccessibilityForBlind",
+  "Author": "jahangmar",
+  "Version": "0.0.1",
+  "Description": "Makes the game accessible for visual-impared or blind people",
+  "UniqueID": "jahangmar.AccessibilityForBlind",
+  "MinimumApiVersion": "3.0.0",
+  "EntryDll": "Accessibility.dll",
+  "Dependencies": [],
+  "UpdateKeys": []
+}
