@@ -50,6 +50,7 @@
     <Compile Include="HarmonyPatches\Farmer_AddItemToInventory.cs" />
     <Compile Include="HarmonyPatches\Game1_showMessages.cs" />
     <Compile Include="Menus\AccessDialogBox.cs" />
+    <Compile Include="Menus\AccessLetterViewerMenu.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

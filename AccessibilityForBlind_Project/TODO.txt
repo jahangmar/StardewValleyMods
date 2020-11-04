@@ -5,7 +5,8 @@ II. implement sound design for in-game (collisions, interactable objects)
 
 
 I.
--bug: wilderness farm tts doesn't work
+-finish dialog box menu
+-fix stacked tts, received item messages
 -implement in-game main menu
 
 II.

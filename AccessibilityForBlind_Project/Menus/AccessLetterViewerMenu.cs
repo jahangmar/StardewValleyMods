@@ -14,48 +14,45 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 using System.Collections.Generic;
 using StardewModdingAPI;
-using StardewValley;
 using StardewValley.Menus;
 
 namespace AccessibilityForBlind.Menus
 {
-    public class AccessDialogBox : AccessMenu
+    public class AccessLetterViewerMenu : AccessMenu
     {
-        private bool initialized = false;
-        public AccessDialogBox(IClickableMenu menu) : base(menu)
+        public AccessLetterViewerMenu(IClickableMenu menu) : base(menu)
         {
-            SpeakCurrentText();
+            TextToSpeech.Speak(GetTitle(), true);
+
+            AddItem(MenuItem.MenuItemFromComponent(menu.upperRightCloseButton, menu, "close letter"));
+
+            ReadMessage();
         }
 
-        private void initialize()
+        private string ConvertMessage(string message)
         {
-            DialogueBox dialogueBox = (stardewMenu as DialogueBox);
-            List<Response> responses = ModEntry.GetHelper().Reflection.GetField<List<Response>>(dialogueBox, "responses").GetValue();
-
-            int j = dialogueBox.allClickableComponents.Count - 1;
-            for (int i=0; i<dialogueBox.allClickableComponents.Count; i++)
-            {
-                AddItem(MenuItem.MenuItemFromComponent(dialogueBox.allClickableComponents[i], dialogueBox, responses[j].responseText));
-                j--;
-            }
-
-            initialized = true;
+            return message.Replace('^', '\n');
         }
 
-        private void SpeakCurrentText()
+        private void ReadMessage()
         {
-            TextToSpeech.Speak((stardewMenu as DialogueBox).getCurrentString());
+            foreach (string message in ModEntry.GetHelper().Reflection.GetField<List<string>>((stardewMenu as LetterViewerMenu), "mailMessage").GetValue())
+                TextToSpeech.Speak(ConvertMessage(message), false);
         }
 
         public override string GetTitle()
         {
-            return "";
+            return ModEntry.GetHelper().Reflection.GetField<string>((stardewMenu as LetterViewerMenu), "mailTitle").GetValue();
         }
 
         public override void ButtonPressed(SButton button)
         {
-            if (!initialized)
-                initialize();
+            switch (button)
+            {
+                case SButton.F1:
+                    ReadMessage();
+                    return;
+            }
             base.ButtonPressed(button);
         }
     }

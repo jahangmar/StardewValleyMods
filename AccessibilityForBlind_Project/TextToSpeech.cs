@@ -16,6 +16,10 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 namespace AccessibilityForBlind
 {
     public static class TextToSpeech
@@ -76,16 +80,20 @@ namespace AccessibilityForBlind
                     ModEntry.Log("Windows detected. Speech2Text is not supported.", StardewModdingAPI.LogLevel.Error);
                     break;
             }
+            //if (initialized)
+             //   queueTask.Start();
         }
 
         private static Process proc;
         private static Speech last_speech;
+        private static Queue<Speech> queue = new Queue<Speech>();
 
         public struct Speech
         {
             public string text;
             public bool male;
             public float speed;
+            public bool overwrite;
         }
 
         public static bool Speaking() =>
@@ -93,7 +101,7 @@ namespace AccessibilityForBlind
 
         public static void Stop()
         {
-            if (proc != null && !proc.HasExited)
+            if (Speaking())
                 proc.Kill();
         }
 
@@ -102,10 +110,28 @@ namespace AccessibilityForBlind
             Speak(last_speech);
         }
 
-        public static void Speak(Speech speech) =>
+        public static void SpeakQueued(Speech speech)
+        {
+            queue.Enqueue(speech);
+            speak(speech);
+        }
+
+        static Task queueTask = new Task(() =>
+        {
+            while (true)
+            {
+                while (queue.Count > 0 && !Speaking())
+                {
+                    Speech q = queue.Dequeue();
+                    speak(q);
+                };
+            }
+        });
+
+        public static void Speak(Speech speech, bool overwrite = true) =>
             Speak(speech.text, speech.male, speech.speed);
 
-        public static void Speak(string text, bool male=true, float speed = 1.0f) 
+        public static void Speak(string text, bool male=true, float speed = 1.0f, bool overwrite = true) 
         {
             if (!initialized)
                 return;
@@ -114,17 +140,33 @@ namespace AccessibilityForBlind
             last_speech.male = male;
             last_speech.speed = speed;
 
-            Stop();
+            Speech speech = new Speech()
+            {
+                text = text,
+                male = male,
+                speed = speed
+            };
 
+            if (overwrite)
+            {
+                queue.Clear();
+                Stop();
+            }
+
+            SpeakQueued(speech);
+        }
+
+        private static void speak(Speech speech)
+        {
             try
             {
                 proc = new Process();
                 proc.StartInfo.UseShellExecute = false;
                 proc.StartInfo.CreateNoWindow = true;
                 proc.StartInfo.FileName = executable;
-                proc.StartInfo.Arguments = "-t " + "'" + text + "'";
+                proc.StartInfo.Arguments = "-t " + "\"" + speech.text.Replace('"', '\'') + "\"";
                 proc.Start();
-                ModEntry.Log("speaking '" + text + "'");
+                ModEntry.Log("speaking '" + speech.text + "'");
 
             }
             catch (Exception e)

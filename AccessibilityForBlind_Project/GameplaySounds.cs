@@ -26,7 +26,8 @@ namespace AccessibilityForBlind
 {
     enum BarrierType
     {
-        Unknown, UnknownObject, UnknownTerrain, UnknownLargeTerrain, Wood, LargeWood, Stone, LargeStone, Weed, Crop, Bush, Tree, ActionObject, UnknownWall, WoodWall, StoneWall, Water
+        Unknown, UnknownObject, UnknownTerrain, UnknownLargeTerrain, Wood, LargeWood, Stone, LargeStone, Weed, Crop, Bush, Tree, ActionObject, UnknownWall, WoodWall, StoneWall, Water,
+        Fence, Lantern, Housewall, Bench, Cliff, PetWaterBowl
     }
 
 
@@ -78,7 +79,7 @@ namespace AccessibilityForBlind
                 switch (e.Button)
                 {
                     case StardewModdingAPI.SButton.Enter:
-                        ModEntry.Log($"dir: {Game1.player.getDirection()}, fdir: {Game1.player.getFacingDirection()}");
+                        //ModEntry.Log($"dir: {Game1.player.getDirection()}, fdir: {Game1.player.getFacingDirection()}");
                         string descr = FindBarrierDescription();
                         if (descr.Length > 0)
                             TextToSpeech.Speak("You feel a " + descr);
@@ -200,11 +201,28 @@ namespace AccessibilityForBlind
 
             if (tile != null)
             {
+                int i = tile.TileIndex;
                 ModEntry.Log("tile "+tile.TileIndex);
                 if (loc is FarmHouse)
-                    return BarrierType.WoodWall;
-
-
+                    return BarrierType.Housewall;
+                else if (i == 184 || i == 1183 || i == 1210 || i == 211 || i == 183 || i == 1182 || i == 185 || i == 1184 || i == 235 || i == 1290 || i == 260 || i == 1315
+                || i == 259 || i == 258 || i == 1257 || i == 1207 || i == 208 || i == 213 || i == 212 || i == 1232 || i == 233 || i == 1209 || i == 210 || i == 238 || i == 1292
+                    || i == 237 || i == 1291)
+                    return BarrierType.Water;
+                else if (i == 383 || i == 384 || i == 385 || i == 436 || i == 411 || i == 386 || i == 434
+                 || i == 832 || i == 833 || i == 834 || i == 866 || i == 898 || i == 930 || i == 900 || i == 929 || i == 928 || i == 896 || i == 864)
+                    return BarrierType.Fence;
+                else if (i == 541 || i == 542 || i == 543 || i == 544 || i == 391 || i == 416 || i == 441 || i == 466 || i == 491 || i == 516 || i == 419 || i == 394 || i == 444
+                || i == 469 || i == 494 || i == 519 || i == 422 || i == 438 || i == 540 || i == 439 || i == 464 || i == 440 || i == 467 || i == 468 || i == 369
+                || i == 344 || i == 319 || i == 294 || i == 295 || i == 291 || i == 316 || i == 366 || i == 496 || i == 522 || i == 548 || i == 547 || i == 546
+                || i == 545 || i == 539 || i == 371 || i == 399 || i == 446 || i == 290)
+                    return BarrierType.Cliff;
+                else if (i == 1938 || i == 1939)
+                    return BarrierType.PetWaterBowl;
+                else if (i == 40 || i == 72 || i == 322 || i == 323 || i == 327 || i == 54 || i == 86)
+                    return BarrierType.Bench;
+                else if (i == 1003)
+                    return BarrierType.Lantern;
                 return BarrierType.UnknownWall;
             }
             else if (loc.isTerrainFeatureAt((int)tilePos.X, (int)tilePos.Y))
@@ -268,8 +286,9 @@ namespace AccessibilityForBlind
         private static string FindBarrierDescription()
         {
             Vector2 nextPos = PlayerNextPosition();
-
+            Vector2 nextTilePos = nextPos / Game1.tileSize;
             BarrierType barrierType = FindBarrierType();
+            GameLocation location = Game1.currentLocation;
             switch (barrierType)
             {
                 case BarrierType.Unknown:
@@ -277,7 +296,7 @@ namespace AccessibilityForBlind
                 case BarrierType.UnknownObject:
                 case BarrierType.Crop:
                 case BarrierType.ActionObject:
-                    if (Game1.currentLocation.getObjectAtTile((int)nextPos.X / Game1.tileSize, (int)nextPos.Y / Game1.tileSize) is StardewValley.Object obj && obj != null)
+                    if (location.getObjectAtTile((int)nextTilePos.X, (int)nextTilePos.Y) is StardewValley.Object obj && obj != null)
                         return obj.DisplayName;
                     else
                         return "";
@@ -298,7 +317,40 @@ namespace AccessibilityForBlind
                 case BarrierType.Bush:
                     return "bush";
                 case BarrierType.Tree:
-                    return "tree";                
+                    Tree tree = location.terrainFeatures[nextTilePos] as Tree;
+                    string stage(Tree t)
+                    {
+                        if (t.stump.Value)
+                            return "stump";
+
+                        switch (t.growthStage.Value)
+                        {
+                            case Tree.seedStage: return "seed";
+                            case Tree.saplingStage: return "sapling";
+                            case Tree.sproutStage: return "sprout";
+                            case Tree.bushStage: return "bush";
+                            case Tree.treeStage:
+                            default: 
+                                return "";
+                        }
+                    }
+
+                    //string 
+                    string type(Tree t)
+                    {
+                        switch (tree.treeType.Value)
+                        {
+                            case Tree.bushyTree: return "oak"; 
+                            case Tree.leafyTree: return "maple";
+                            case Tree.palmTree: return "palm";
+                            case Tree.pineTree: return "pine";
+                            case Tree.winterTree1: return "winter1";
+                            case Tree.winterTree2: return "winter2";
+                            default: return "unknown";
+                        }
+                    }
+                    string addon(Tree t) => t.tapped.Value ? "with tapper" : "";
+                    return type(tree) + " tree " + stage(tree) + " " + addon(tree);
                 case BarrierType.UnknownWall:
                     return "";
                 case BarrierType.WoodWall:
@@ -307,6 +359,21 @@ namespace AccessibilityForBlind
                     return "stone wall";
                 case BarrierType.Water:
                     return "water";
+                case BarrierType.PetWaterBowl:
+                    if (Game1.getFarm().petBowlWatered.Value)
+                        return "filled water bowl";
+                    else
+                        return "empty water bowl";
+                case BarrierType.Cliff:
+                    return "cliff";
+                case BarrierType.Fence:
+                    return "fence";
+                case BarrierType.Lantern:
+                    return "lantern";
+                case BarrierType.Housewall:
+                    return "house wall";
+                case BarrierType.Bench:
+                    return "bench";
             }
             return "";
         }
@@ -321,7 +388,12 @@ namespace AccessibilityForBlind
                 case BarrierType.WoodWall: Game1.playSound("woodWhack"); break;
                 case BarrierType.Bush: Game1.playSound("leafrustle"); break;
                 case BarrierType.Tree: Game1.playSound("axchop"); break;
-                default: Game1.playSound("clank"); break;
+                case BarrierType.Water: Game1.playSound("dropItemInWater"); break;
+                case BarrierType.Lantern: Game1.playSound("clank"); break;
+                case BarrierType.Fence: Game1.playSound("axe"); break;
+                case BarrierType.Cliff: Game1.playSound("hammer"); break;
+                case BarrierType.Housewall: Game1.playSound("treethud"); break;
+                default: Game1.playSound("boop"); break;
 
             }
         }
