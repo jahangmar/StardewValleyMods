@@ -61,11 +61,9 @@ namespace AccessibilityForBlind.Menus
             }
 
             base.ButtonPressed(button);
-            switch (button)
+            if (Inputs.IsMenuTitleMuteButton(button))
             {
-                case SButton.M:
-                    muteButton.Activate();
-                    break;
+                muteButton.Activate();
             }
         }
     }

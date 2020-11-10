@@ -80,8 +80,8 @@ namespace AccessibilityForBlind
                     ModEntry.Log("Windows detected. Speech2Text is not supported.", StardewModdingAPI.LogLevel.Error);
                     break;
             }
-            //if (initialized)
-             //   queueTask.Start();
+            if (initialized)
+                queueTask.Start();
         }
 
         private static Process proc;
@@ -91,18 +91,28 @@ namespace AccessibilityForBlind
         public struct Speech
         {
             public string text;
-            public bool male;
+            public Gender gender;
             public float speed;
             public bool overwrite;
+        }
+
+        public enum Gender {
+            Male,
+            Female,
+            Neutral
         }
 
         public static bool Speaking() =>
             proc != null && !proc.HasExited;
 
+        public static bool QueuedSpeech() => queue.Count > 0;
+
         public static void Stop()
         {
             if (Speaking())
                 proc.Kill();
+
+            queue.Clear();
         }
 
         public static void Repeat()
@@ -113,13 +123,15 @@ namespace AccessibilityForBlind
         public static void SpeakQueued(Speech speech)
         {
             queue.Enqueue(speech);
-            speak(speech);
+            //speak(speech);
+
         }
 
         static Task queueTask = new Task(() =>
         {
             while (true)
             {
+                System.Threading.Thread.Sleep(200);
                 while (queue.Count > 0 && !Speaking())
                 {
                     Speech q = queue.Dequeue();
@@ -129,21 +141,22 @@ namespace AccessibilityForBlind
         });
 
         public static void Speak(Speech speech, bool overwrite = true) =>
-            Speak(speech.text, speech.male, speech.speed);
+            Speak(speech.text, speech.gender, speech.speed);
 
-        public static void Speak(string text, bool male=true, float speed = 1.0f, bool overwrite = true) 
+
+        public static void Speak(string text, Gender gender=Gender.Neutral, float speed = 1.0f, bool overwrite = true) 
         {
             if (!initialized)
                 return;
 
             last_speech.text = text;
-            last_speech.male = male;
+            last_speech.gender = gender;
             last_speech.speed = speed;
 
             Speech speech = new Speech()
             {
                 text = text,
-                male = male,
+                gender = gender,
                 speed = speed
             };
 
@@ -156,6 +169,18 @@ namespace AccessibilityForBlind
             SpeakQueued(speech);
         }
 
+        private static string GetSpeedArg()
+        {
+            float speed = 1 + 1 - ModEntry.GetConfig().tts_speed / 100f;
+            return "--setf duration_stretch=" + speed.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private static string GetPitchArg()
+        {
+            int pitch = ModEntry.GetConfig().tts_pitch;
+            return "--setf int_f0_target_mean=" + pitch;
+        }
+
         private static void speak(Speech speech)
         {
             try
@@ -164,7 +189,18 @@ namespace AccessibilityForBlind
                 proc.StartInfo.UseShellExecute = false;
                 proc.StartInfo.CreateNoWindow = true;
                 proc.StartInfo.FileName = executable;
-                proc.StartInfo.Arguments = "-t " + "\"" + speech.text.Replace('"', '\'') + "\"";
+                string voice()
+                {
+                    switch (speech.gender)
+                    {
+                        case Gender.Male: return "-voice rms";
+                        case Gender.Female: return "-voice slt";
+                        case Gender.Neutral: return "-voice ap";
+                        default: return "";
+                    }
+                }
+                proc.StartInfo.Arguments = $"{GetSpeedArg()} {GetPitchArg()} {voice()} -t " + "\"" + speech.text.Replace('"', '\'') + "\"";
+                //ModEntry.Log("mimic args: " + proc.StartInfo.Arguments);
                 proc.Start();
                 ModEntry.Log("speaking '" + speech.text + "'");
 

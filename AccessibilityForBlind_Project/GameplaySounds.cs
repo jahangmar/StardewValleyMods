@@ -21,20 +21,26 @@ using StardewValley.Locations;
 using StardewValley.Objects;
 using StardewValley.TerrainFeatures;
 using Microsoft.Xna.Framework.Audio;
+using System.IO;
+using System.Collections.Generic;
 
 namespace AccessibilityForBlind
 {
     enum BarrierType
     {
         Unknown, UnknownObject, UnknownTerrain, UnknownLargeTerrain, Wood, LargeWood, Stone, LargeStone, Weed, Crop, Bush, Tree, ActionObject, UnknownWall, WoodWall, StoneWall, Water,
-        Fence, Lantern, Housewall, Bench, Cliff, PetWaterBowl
+        Fence, Lantern, Housewall, Bench, Cliff, PetWaterBowl, NPC
     }
-
 
     public static class GameplaySounds
     {
+        private const int hearing_distance = 15;
+
+
         private static Vector2 oldPlayerPos;
         private static int FacingDir = 0;
+        private static Dictionary<string, SoundEffectInstance> soundEffects = new Dictionary<string, SoundEffectInstance>();
+        private const string sound_guitar = "guitar";
 
         public static void Init()
         {
@@ -43,9 +49,20 @@ namespace AccessibilityForBlind
             ModEntry.GetHelper().Events.Input.ButtonReleased += Input_ButtonReleased;
             ModEntry.GetHelper().Events.GameLoop.OneSecondUpdateTicked += GameLoop_OneSecondUpdateTicked;
             ModEntry.GetHelper().Events.Player.Warped += Player_Warped;
-            //Microsoft.Xna.Framework.Audio.SoundBank
-            //  ->playCue has 3D option
-            //Game1.playSoundPitched might be blueprint for custom sound function
+
+            void AddSound(string name)
+            {
+                string filepath = Path.Combine(ModEntry.GetHelper().DirectoryPath, "sounds", name + ".wav");
+                FileStream stream = new FileStream(filepath, FileMode.Open);
+                byte[] buffer = new byte[stream.Length];
+                stream.Read(buffer, 0, buffer.Length);
+                MemoryStream memStream = new MemoryStream(buffer);
+
+                SoundEffect effect = SoundEffect.FromStream(memStream);
+                stream.Dispose();
+                soundEffects.Add(name, effect.CreateInstance());
+            }
+            AddSound(sound_guitar);
         }
 
         static void Player_Warped(object sender, StardewModdingAPI.Events.WarpedEventArgs e)
@@ -76,21 +93,25 @@ namespace AccessibilityForBlind
 
             if (Game1.activeClickableMenu == null)
             {
-                switch (e.Button)
+                if (Inputs.IsTTSMapCheckButton(e.Button))
                 {
-                    case StardewModdingAPI.SButton.Enter:
                         //ModEntry.Log($"dir: {Game1.player.getDirection()}, fdir: {Game1.player.getFacingDirection()}");
                         string descr = FindBarrierDescription();
                         if (descr.Length > 0)
                             TextToSpeech.Speak("You feel a " + descr);
-                        break;
+                }
+                else if (false && Inputs.IsGameMenuButton(e.Button))
+                {
+                    Game1.activeClickableMenu = new StardewValley.Menus.GameMenu(true);
+                    Menus.AccessMenu menu = ModEntry.GetInstance().SelectMenu(Game1.activeClickableMenu);
+                    (menu as Menus.AccessGameMenu).ButtonPressed(e.Button);
                 }
             }
         }
 
         static void Input_ButtonReleased(object sender, StardewModdingAPI.Events.ButtonReleasedEventArgs e)
         {
-            if (!StardewModdingAPI.Context.IsWorldReady)
+            if (!StardewModdingAPI.Context.IsWorldReady || Game1.activeClickableMenu != null)
                 return;
 
             if ((int)Game1.options.inventorySlot1[0].key == (int)e.Button
@@ -110,6 +131,26 @@ namespace AccessibilityForBlind
                 {
                     TextToSpeech.Speak(TextToSpeech.ItemToSpeech(Game1.player.CurrentItem));
                 }
+            }
+            else if (Inputs.IsTTSRepeatButton(e.Button))
+            {
+                TextToSpeech.Repeat();
+            }
+            else if (Inputs.IsTTSInfoButton(e.Button))
+            {
+                TextToSpeech.Speak(TextToSpeech.ItemToSpeech(Game1.player.CurrentItem) + " " + Game1.player.CurrentItem.getDescription());
+            }
+            else if (Inputs.IsTTSHealthButton(e.Button))
+            {
+                string percent(float f)
+                {
+                    return 1-f < 0.001 ? "full" : ((int)System.Math.Round(f * 100)) + "%";
+                }
+                TextToSpeech.Speak("health: " + percent(Game1.player.health / Game1.player.maxHealth) + ", stamina: " + percent(Game1.player.Stamina / Game1.player.MaxStamina));
+            }
+            else if (Inputs.IsTTSTimeButton(e.Button))
+            {
+                TextToSpeech.Speak("Time: " + Game1.getTimeOfDayString(Game1.timeOfDay) + ", Day " + Game1.dayOfMonth + " of " + Game1.CurrentSeasonDisplayName + " in year " + Game1.year);
             }
         }
 
@@ -157,11 +198,61 @@ namespace AccessibilityForBlind
             foreach (Character character in Game1.currentLocation.getCharacters())
             {
                 Vector2 charPos = character.Position;
-                if (Utility.distance(charPos.X, Game1.player.Position.X, charPos.Y, Game1.player.Position.Y) < 10*Game1.tileSize)
+                if (Utility.distance(charPos.X, Game1.player.Position.X, charPos.Y, Game1.player.Position.Y) < hearing_distance*Game1.tileSize)
                 {
-                    PlaySound("stoneStep", charPos / Game1.tileSize); //TODO step depends on tile
+                    PlaySoundEffect(sound_guitar, charPos);
                 }
             }
+        }
+
+        private static void PlaySoundEffect(string name, Vector2 sourcePosition)
+        {
+            int pX = (int)Game1.player.Position.X / Game1.tileSize;
+            int pY = (int)Game1.player.Position.Y / Game1.tileSize;
+            int sX = (int)sourcePosition.X / Game1.tileSize;
+            int sY = (int)sourcePosition.Y / Game1.tileSize;
+
+            float GetVolume()
+            {
+                float d = 1 - Utility.distance(pX, sX, pY, sY) / hearing_distance;
+                return d < 0 ? 0 : (d > 1 ? 1 : d);
+            }
+
+            float GetPitch()
+            {
+                if (pY == sY)
+                    return 0;
+                if (pY > sY)
+                {
+                    return -(float)System.Math.Min((pY - sY), hearing_distance) / hearing_distance;
+                }
+                else
+                {
+                    return (float)System.Math.Min((sY - pY), hearing_distance) / hearing_distance;
+                }
+            }
+
+            float GetPan()
+            {
+                if (pX == sX)
+                    return 0;
+                if (pX > sX)
+                {
+                    return -(float)System.Math.Min((pX - sX), hearing_distance) / hearing_distance;
+                }
+                else
+                {
+                    return (float)System.Math.Min((sX - pX), hearing_distance) / hearing_distance;
+                }
+            }
+
+            SoundEffectInstance instance = soundEffects[name];
+
+            instance.Pan = GetPan();
+            instance.Volume = GetVolume();
+            instance.Pitch = GetPitch();
+            ModEntry.Log($"pitch " + instance.Pitch);
+            instance.Play();
         }
 
         private static void PlaySound(string cueName, Vector2 sourceTilePos)
@@ -169,6 +260,7 @@ namespace AccessibilityForBlind
             try
             {
                 SoundBank soundBank =  ModEntry.GetHelper().Reflection.GetField<SoundBank>(Game1.soundBank as SoundBankWrapper, "soundBank").GetValue();
+
                 Cue cue = soundBank.GetCue(cueName);
                 AudioListener listener = new AudioListener
                 {
@@ -228,7 +320,7 @@ namespace AccessibilityForBlind
             else if (loc.isTerrainFeatureAt((int)tilePos.X, (int)tilePos.Y))
             {
                 TerrainFeature terrainFeature = loc.terrainFeatures.ContainsKey(tilePos) ? loc.terrainFeatures[tilePos] : loc.getLargeTerrainFeatureAt((int)tilePos.X, (int)tilePos.Y);
-                ModEntry.Log("terrain: "+terrainFeature.ToString());
+                //ModEntry.Log("terrain: "+terrainFeature.ToString());
                 if (terrainFeature is Bush)
                     return BarrierType.Bush;
                 if (terrainFeature is Tree)
@@ -276,6 +368,10 @@ namespace AccessibilityForBlind
                         ModEntry.Log("obj: " + obj.Name +", id: "+ obj.ParentSheetIndex);
                         return BarrierType.UnknownObject;
                 }
+            }
+            else if (Game1.currentLocation.isCharacterAtTile(tilePos) != null)
+            {
+                return BarrierType.NPC;
             }
             else
             {
@@ -374,6 +470,10 @@ namespace AccessibilityForBlind
                     return "house wall";
                 case BarrierType.Bench:
                     return "bench";
+                case BarrierType.NPC:
+                    if (Game1.currentLocation.isCharacterAtTile(nextTilePos) is NPC npc)
+                        return npc.displayName;
+                    return "";
             }
             return "";
         }

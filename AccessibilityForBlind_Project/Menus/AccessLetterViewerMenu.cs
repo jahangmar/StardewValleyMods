@@ -20,11 +20,14 @@ namespace AccessibilityForBlind.Menus
 {
     public class AccessLetterViewerMenu : AccessMenu
     {
+        private MenuItem closeButton;
+
         public AccessLetterViewerMenu(IClickableMenu menu) : base(menu)
         {
-            TextToSpeech.Speak(GetTitle(), true);
+            TextToSpeech.Speak(GetTitle(), TextToSpeech.Gender.Neutral);
 
-            AddItem(MenuItem.MenuItemFromComponent(menu.upperRightCloseButton, menu, "close letter"));
+            closeButton = MenuItem.MenuItemFromComponent(menu.upperRightCloseButton, menu, "close letter");
+            AddItem(closeButton);
 
             ReadMessage();
         }
@@ -37,7 +40,7 @@ namespace AccessibilityForBlind.Menus
         private void ReadMessage()
         {
             foreach (string message in ModEntry.GetHelper().Reflection.GetField<List<string>>((stardewMenu as LetterViewerMenu), "mailMessage").GetValue())
-                TextToSpeech.Speak(ConvertMessage(message), false);
+                TextToSpeech.Speak(ConvertMessage(message), TextToSpeech.Gender.Neutral);
         }
 
         public override string GetTitle()
@@ -47,12 +50,22 @@ namespace AccessibilityForBlind.Menus
 
         public override void ButtonPressed(SButton button)
         {
-            switch (button)
+            if (Inputs.IsTTSInfoButton(button))
             {
-                case SButton.F1:
-                    ReadMessage();
-                    return;
+                ReadMessage();
+                return;
             }
+            else if (Inputs.IsMenuEscapeButton(button))
+            {
+                if (!TextToSpeech.Speaking())
+                {
+                    current = closeButton;
+                    current.Select();
+                    current.SpeakOnSelect();
+                    return;
+                }
+            }
+
             base.ButtonPressed(button);
         }
     }
