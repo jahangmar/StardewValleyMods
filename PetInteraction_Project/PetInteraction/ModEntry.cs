@@ -586,7 +586,7 @@ namespace PetInteraction
             if (e.NewLocation.Name == "Temp")
             {
                 Monitor.Log("Pet cannot follow on temporary map. Warping to Farm and unfollow.");
-                WarpPet(Game1.getLocationFromName("Farm"), new Vector2(54f, 8f));
+                WarpPetToFarm();
                 SetState(PetState.Vanilla);
             }
             else if (e.NewLocation is Town
@@ -646,7 +646,7 @@ namespace PetInteraction
             }
             else if (e.NewLocation is Farm)
             {
-                WarpPet(Game1.getLocationFromName("Farm"), new Vector2(54f, 8f));
+                WarpPetToFarm();
                 pet.position.X -= 64f;
             }
 
@@ -695,6 +695,12 @@ namespace PetInteraction
             if (pet.currentLocation == null)
                 pet.currentLocation = Game1.currentLocation;
             GetPet().warpToFarmHouse(owner);
+        }
+
+        private void WarpPetToFarm()
+        {
+            Point p = Game1.getFarm().GetPetStartLocation();
+            WarpPet(Game1.getFarm(), new Vector2(p.X, p.Y));
         }
 
         private bool CanUpdatePet() => Context.IsWorldReady && Game1.currentLocation != null && Game1.player.hasPet() && GetPet() != null && Game1.activeClickableMenu == null && !Game1.eventUp;
