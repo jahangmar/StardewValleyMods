@@ -28,6 +28,7 @@ using static PetInteraction.PetBehavior;
 using StardewValley.Tools;
 using System;
 
+
 namespace PetInteraction
 {
     public class ModEntry : Mod
@@ -111,14 +112,14 @@ namespace PetInteraction
             TempPet.currentLocation = Game1.getFarm();
             if (!Game1.getFarm().characters.Contains(TempPet))
                 Game1.warpCharacter(TempPet, Game1.getFarm(), new Vector2(0, 0));
-            Log("Adding TempPet");
+            //Log("Adding TempPet");
         }
 
         private void RemoveTempPetFromFarm()
         {
             if (Game1.getFarm().characters.Contains(TempPet))
                 Game1.getFarm().characters.Remove(TempPet);
-            Log("Removing TempPet");
+            //Log("Removing TempPet");
 
             foreach (GameLocation location in Game1.locations)
             {
@@ -259,6 +260,7 @@ namespace PetInteraction
                 return;
 
             Vector2 grabTile = e.Cursor.GrabTile;
+            Vector2 tile = e.Cursor.Tile;
 
             bool PetClicked(Pet p)
             {
@@ -272,8 +274,23 @@ namespace PetInteraction
 
             bool GarbageClicked()
             {
-                xTile.Dimensions.Location l = new xTile.Dimensions.Location((int)grabTile.X, (int)grabTile.Y);
-                return Game1.currentLocation.map.GetLayer("Buildings").Tiles[l] != null && Game1.player.mount == null && Game1.currentLocation.map.GetLayer("Buildings").Tiles[l].TileIndex == garbage_can_tile_index;
+                //this is based on what the game does to calculate the tile for the trash can (checkAction and tryToCheckAt)
+                Vector2 mouseTileVec = new Vector2(Game1.getOldMouseX() + Game1.viewport.X, Game1.getOldMouseY() + Game1.viewport.Y) / Game1.tileSize;
+
+                if (!Game1.wasMouseVisibleThisFrame || Game1.mouseCursorTransparency == 0f || !Utility.tileWithinRadiusOfPlayer((int)mouseTileVec.X, (int)mouseTileVec.Y, 1, Game1.player))
+                {
+                    mouseTileVec = Game1.player.GetGrabTile();
+                }
+                Vector2 mouseTileVecBelow = new Vector2(mouseTileVec.X, mouseTileVec.Y + 1);
+                Vector2 mouseTileVecAbove = new Vector2(mouseTileVec.X, mouseTileVec.Y - 1);
+
+                bool checkTile(Vector2 vec)
+                {
+                    xTile.Dimensions.Location location = new xTile.Dimensions.Location((int)vec.X, (int)vec.Y);
+                    return Game1.currentLocation.map.GetLayer("Buildings").Tiles[location] != null && Game1.player.mount == null && Game1.currentLocation.map.GetLayer("Buildings").Tiles[location].TileIndex == garbage_can_tile_index;
+                }
+
+                return checkTile(mouseTileVec) || (Game1.player.FacingDirection >= 0 && Game1.player.FacingDirection <= 3) && (checkTile(mouseTileVecBelow) || checkTile(mouseTileVecAbove));
             }
 
             GameLocation loc = Game1.currentLocation;
